@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: Checks if the user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper: Checks if the request comes from the owner of the user document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Rules for user profiles and daily entries
+    // Path: users/{userId} (profile/info & entries/{entryId})
+    match /users/{userId} {
+      allow read, write: if isOwner(userId);
+      
+      match /profile/{profileId} {
+        allow read, write: if isOwner(userId);
+      }
+      
+      match /entries/{entryId} {
+        allow read, write: if isOwner(userId);
+      }
+    }
+
+    // Rules for public contact submissions
+    // Allow anyone to submit a contact form, but prevent reading, editing, or deleting existing entries.
+    match /contactSubmissions/{submissionId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+  }
+}
