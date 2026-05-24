@@ -1,0 +1,8 @@
+{
+  "appId": "com.nicutracks.app",
+  "appName": "RIMS NICU Tracker",
+  "webDir": "out",
+  "server": {
+    "androidScheme": "https"
+  }
+}
