@@ -20,8 +20,8 @@ const removeUndefined = (obj: any): any => {
     return obj.map(removeUndefined);
   }
   if (obj !== null && typeof obj === 'object') {
-    const proto = Object.getPrototypeOf(obj);
-    if (proto === Object.prototype || proto === null) {
+    const ctr = obj.constructor;
+    if (ctr === undefined || ctr === Object || ctr.name === 'Object') {
       const newObj: any = {};
       for (const key of Object.keys(obj)) {
         if (obj[key] !== undefined) {

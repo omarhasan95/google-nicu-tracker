@@ -660,12 +660,17 @@ export default function Dashboard() {
       cultureSensitivity2Pattern: formCulturePositive ? (formCultureSensitivity2Pattern || undefined) : undefined
     };
 
+    // Remove undefined properties to prevent Firebase error: "Unsupported field value: undefined"
+    const cleanedPayload = Object.fromEntries(
+      Object.entries(payload).filter(([_, v]) => v !== undefined)
+    ) as any;
+
     try {
       if (editingPatient?.id) {
-        await updatePatient(user.uid, editingPatient.id, payload);
+        await updatePatient(user.uid, editingPatient.id, cleanedPayload);
         triggerToast('Patient record updated successfully', 'success');
       } else {
-        await addPatient(user.uid, payload);
+        await addPatient(user.uid, cleanedPayload);
         triggerToast('New patient added successfully', 'success');
       }
       closeFormModal();
