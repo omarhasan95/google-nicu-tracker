@@ -81,14 +81,14 @@ export default function BedMapTab({
   // Row 3: Bed 2, (center nursing desk), Bed 8
   // Row 4 (bottom): Bed 1, (empty), (empty)
   const bedGridPositions = [
-    { bedNum: 1, gridClass: 'col-start-1 row-start-4' },
-    { bedNum: 2, gridClass: 'col-start-1 row-start-3' },
-    { bedNum: 3, gridClass: 'col-start-1 row-start-2' },
-    { bedNum: 4, gridClass: 'col-start-1 row-start-1' },
-    { bedNum: 5, gridClass: 'col-start-2 row-start-1' },
-    { bedNum: 6, gridClass: 'col-start-3 row-start-1' },
-    { bedNum: 7, gridClass: 'col-start-3 row-start-2' },
-    { bedNum: 8, gridClass: 'col-start-3 row-start-3' },
+    { bedNum: 1, gridClass: 'sm:col-start-1 sm:row-start-4' },
+    { bedNum: 2, gridClass: 'sm:col-start-1 sm:row-start-3' },
+    { bedNum: 3, gridClass: 'sm:col-start-1 sm:row-start-2' },
+    { bedNum: 4, gridClass: 'sm:col-start-1 sm:row-start-1' },
+    { bedNum: 5, gridClass: 'sm:col-start-2 sm:row-start-1' },
+    { bedNum: 6, gridClass: 'sm:col-start-3 sm:row-start-1' },
+    { bedNum: 7, gridClass: 'sm:col-start-3 sm:row-start-2' },
+    { bedNum: 8, gridClass: 'sm:col-start-3 sm:row-start-3' },
   ];
 
   return (
@@ -133,9 +133,9 @@ export default function BedMapTab({
         <div className="lg:col-span-8 bg-slate-55 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-3 sm:p-8 text-center overflow-x-auto scrollbar-none">
           
           <div className="max-w-3xl mx-auto w-full">
-            <div className="grid grid-cols-3 grid-rows-[auto_auto_auto_auto] gap-2 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto_auto] gap-4 sm:gap-6">
               {/* Central Desk Widget */}
-              <div className="col-start-2 row-start-2 row-span-2 col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-3 hover-lift transition-all duration-300">
+              <div className="col-span-1 sm:col-start-2 sm:row-start-2 sm:row-span-2 sm:col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-3 hover-lift transition-all duration-300 order-first sm:order-none">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
                   <ShieldCheck className="w-4 sm:w-5 h-4 sm:h-5" />
                 </div>
@@ -359,6 +359,14 @@ export default function BedMapTab({
                                           const currentAgeHours = calculateHoursBetween(patient.dob, new Date().toISOString()) || 0;
                                           const biliHours = calculateHoursBetween(patient.dob, log.timestamp) || currentAgeHours;
                                           const res = calculateBiliCutoffs(gaWeeks, biliHours, hasRisk, log.value);
+                                          const shortLabels: Record<string, string> = {
+                                            safe: 'Safe',
+                                            monitor: 'Monitor',
+                                            photo: 'Photo',
+                                            warning: 'Escalate',
+                                            critical: 'Exchange'
+                                          };
+                                          const shortLabel = shortLabels[res.classification.type] || res.classification.label;
                                           
                                           return (
                                             <div key={idx} className="flex flex-col bg-white p-1.5 rounded border border-amber-100/50 space-y-1">
@@ -369,9 +377,9 @@ export default function BedMapTab({
                                                 </span>
                                               </div>
                                               <div className="flex justify-between items-center text-[7px] sm:text-[9px] border-t border-slate-50 pt-1 gap-1">
-                                                <span className="text-slate-400 font-semibold">Photo: ≥{res.phototherapy} | Exch: ≥{res.exchange}</span>
+                                                <span className="text-slate-400 font-semibold truncate">P: ≥{res.phototherapy} | E: ≥{res.exchange}</span>
                                                 <span className={`px-1 py-0.2 rounded font-black border text-[7px] sm:text-[9px] leading-none shrink-0 ${res.classification.color}`}>
-                                                  {res.classification.label}
+                                                  {shortLabel}
                                                 </span>
                                               </div>
                                             </div>

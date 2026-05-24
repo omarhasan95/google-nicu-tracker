@@ -313,11 +313,10 @@ export default function HomeClient() {
             <div key={mockUnit} className="bg-slate-50/50 rounded-2xl p-3 sm:p-6 border border-slate-200/40 animate-slide-up overflow-x-auto scrollbar-none">
               <div className="max-w-2xl mx-auto w-full">
                 
-                {/* 3-column U-shaped layout grid on all screen sizes */}
-                <div className="grid grid-cols-3 grid-rows-4 gap-2 sm:gap-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto_auto] gap-4 sm:gap-5">
                   
                   {/* Central Nursing Station Card */}
-                  <div className="col-start-2 row-start-2 row-span-2 col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-2 hover-lift transition-all duration-300">
+                  <div className="col-span-1 sm:col-start-2 sm:row-start-2 sm:row-span-2 sm:col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-2 hover-lift transition-all duration-300 order-first sm:order-none">
                     <span className="text-xs">👩‍⚕️</span>
                     <strong className="text-slate-700 text-[10px] sm:text-xs font-bold block">{mockUnit} Desk</strong>
                     <div className="text-[9px] sm:text-xs text-slate-450 font-bold uppercase tracking-wider block">
@@ -327,14 +326,14 @@ export default function HomeClient() {
 
                   {/* Warmer Bed placements */}
                   {[
-                    { num: 1, grid: 'col-start-1 row-start-4' },
-                    { num: 2, grid: 'col-start-1 row-start-3' },
-                    { num: 3, grid: 'col-start-1 row-start-2' },
-                    { num: 4, grid: 'col-start-1 row-start-1' },
-                    { num: 5, grid: 'col-start-2 row-start-1' },
-                    { num: 6, grid: 'col-start-3 row-start-1' },
-                    { num: 7, grid: 'col-start-3 row-start-2' },
-                    { num: 8, grid: 'col-start-3 row-start-3' }
+                    { num: 1, grid: 'sm:col-start-1 sm:row-start-4' },
+                    { num: 2, grid: 'sm:col-start-1 sm:row-start-3' },
+                    { num: 3, grid: 'sm:col-start-1 sm:row-start-2' },
+                    { num: 4, grid: 'sm:col-start-1 sm:row-start-1' },
+                    { num: 5, grid: 'sm:col-start-2 sm:row-start-1' },
+                    { num: 6, grid: 'sm:col-start-3 sm:row-start-1' },
+                    { num: 7, grid: 'sm:col-start-3 sm:row-start-2' },
+                    { num: 8, grid: 'sm:col-start-3 sm:row-start-3' }
                   ].map(({ num, grid }) => {
                     const bedPatients = occupiedMap[num] || [];
                     const isOccupied = bedPatients.length > 0;
