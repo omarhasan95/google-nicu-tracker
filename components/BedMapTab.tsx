@@ -207,6 +207,21 @@ export default function BedMapTab({
                             const isRbsExpanded = expandedRbsBabyId === patient.id;
                             const isBiliExpanded = expandedBiliBabyId === patient.id;
 
+                            const lastBiliLog = patient.bilirubinLog && patient.bilirubinLog.length > 0 ? patient.bilirubinLog[patient.bilirubinLog.length - 1] : null;
+                            let biliBadge = null;
+                            if (lastBiliLog) {
+                              const gaWeeks = patient.gestationalAgeWeeks !== undefined ? patient.gestationalAgeWeeks : 38;
+                              const hasRisk = patient.hasNeuroRisk || false;
+                              const currentAgeHours = calculateHoursBetween(patient.dob, new Date().toISOString()) || 0;
+                              const biliHours = calculateHoursBetween(patient.dob, lastBiliLog.timestamp) || currentAgeHours;
+                              const res = calculateBiliCutoffs(gaWeeks, biliHours, hasRisk, lastBiliLog.value);
+                              biliBadge = {
+                                label: res.classification.label,
+                                color: res.classification.color,
+                                value: lastBiliLog.value
+                              };
+                            }
+
                             return (
                               <div 
                                 key={patient.id} 
@@ -228,6 +243,11 @@ export default function BedMapTab({
                                       {patient.culturePositive && (
                                         <span className="inline-flex items-center gap-0.5 px-0.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-100 font-black text-[7px] sm:text-[9px] leading-none" title={`Culture: ${patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}`}>
                                           🦠 POS
+                                        </span>
+                                      )}
+                                      {biliBadge && (
+                                        <span className={`inline-flex items-center gap-0.5 px-1 py-0.2 rounded font-black text-[7px] sm:text-[9px] leading-none border ${biliBadge.color}`} title={`Bilirubin: ${biliBadge.value} mg/dL`}>
+                                          💡 {biliBadge.label} ({biliBadge.value})
                                         </span>
                                       )}
                                     </p>
@@ -331,16 +351,32 @@ export default function BedMapTab({
                                       <span className="text-[7px] sm:text-[10px] text-amber-600">Serum Bili</span>
                                     </div>
                                     
-                                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                                    <div className="space-y-1.5 max-h-40 overflow-y-auto">
                                       {patient.bilirubinLog && patient.bilirubinLog.length > 0 ? (
-                                        patient.bilirubinLog.slice(-3).reverse().map((log, idx) => (
-                                          <div key={idx} className="flex justify-between items-center bg-white px-1.5 py-0.5 rounded border border-amber-100/50">
-                                            <span className="font-extrabold text-amber-700">{log.value} mg/dL</span>
-                                            <span className="text-[7px] sm:text-[9px] text-slate-450 font-semibold">
-                                              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                            </span>
-                                          </div>
-                                        ))
+                                        patient.bilirubinLog.slice(-3).reverse().map((log, idx) => {
+                                          const gaWeeks = patient.gestationalAgeWeeks !== undefined ? patient.gestationalAgeWeeks : 38;
+                                          const hasRisk = patient.hasNeuroRisk || false;
+                                          const currentAgeHours = calculateHoursBetween(patient.dob, new Date().toISOString()) || 0;
+                                          const biliHours = calculateHoursBetween(patient.dob, log.timestamp) || currentAgeHours;
+                                          const res = calculateBiliCutoffs(gaWeeks, biliHours, hasRisk, log.value);
+                                          
+                                          return (
+                                            <div key={idx} className="flex flex-col bg-white p-1.5 rounded border border-amber-100/50 space-y-1">
+                                              <div className="flex justify-between items-center">
+                                                <span className="font-extrabold text-amber-700 text-[9px] sm:text-xs">{log.value} mg/dL</span>
+                                                <span className="text-[7px] sm:text-[9px] text-slate-450 font-semibold">
+                                                  {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </span>
+                                              </div>
+                                              <div className="flex justify-between items-center text-[7px] sm:text-[9px] border-t border-slate-50 pt-1 gap-1">
+                                                <span className="text-slate-400 font-semibold">Photo: ≥{res.phototherapy} | Exch: ≥{res.exchange}</span>
+                                                <span className={`px-1 py-0.2 rounded font-black border text-[7px] sm:text-[9px] leading-none shrink-0 ${res.classification.color}`}>
+                                                  {res.classification.label}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
                                       ) : (
                                         <span className="text-[8px] sm:text-[10px] text-slate-450 italic block">No bilirubin logs.</span>
                                       )}
