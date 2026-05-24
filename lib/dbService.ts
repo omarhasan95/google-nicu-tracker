@@ -14,6 +14,26 @@ import {
 } from 'firebase/firestore';
 import { BabyProfile, DailyEntry, ContactSubmission, Patient } from '../types';
 
+// Helper to recursively remove undefined fields from plain objects/arrays before writing to Firestore
+const removeUndefined = (obj: any): any => {
+  if (Array.isArray(obj)) {
+    return obj.map(removeUndefined);
+  }
+  if (obj !== null && typeof obj === 'object') {
+    const proto = Object.getPrototypeOf(obj);
+    if (proto === Object.prototype || proto === null) {
+      const newObj: any = {};
+      for (const key of Object.keys(obj)) {
+        if (obj[key] !== undefined) {
+          newObj[key] = removeUndefined(obj[key]);
+        }
+      }
+      return newObj;
+    }
+  }
+  return obj;
+};
+
 // Check if Firebase is running in mock mode
 export const isMockMode = (): boolean => {
   const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDajtoLwBLW1iOplCcKYsyhXn2qsgbVWLU";
@@ -40,7 +60,7 @@ export const saveBabyProfile = async (userId: string, profile: BabyProfile): Pro
     return;
   }
 
-  await setDoc(doc(db, 'users', userId, 'profile', 'info'), profile);
+  await setDoc(doc(db, 'users', userId, 'profile', 'info'), removeUndefined(profile));
 };
 
 // --- Daily Tracking Logs Persistence ---
@@ -84,10 +104,10 @@ export const addDailyEntry = async (userId: string, entry: Omit<DailyEntry, 'id'
     return newId;
   }
 
-  const docRef = await addDoc(collection(db, 'users', userId, 'entries'), {
+  const docRef = await addDoc(collection(db, 'users', userId, 'entries'), removeUndefined({
     ...entry,
     createdAt: serverTimestamp()
-  });
+  }));
   return docRef.id;
 };
 
@@ -141,11 +161,11 @@ export const addPatient = async (userId: string, patient: Omit<Patient, 'id'>): 
     return newId;
   }
 
-  const docRef = await addDoc(collection(db, 'users', userId, 'patients'), {
+  const docRef = await addDoc(collection(db, 'users', userId, 'patients'), removeUndefined({
     ...patient,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
-  });
+  }));
   return docRef.id;
 };
 
@@ -167,10 +187,10 @@ export const updatePatient = async (userId: string, patientId: string, patient: 
     return;
   }
 
-  await updateDoc(doc(db, 'users', userId, 'patients', patientId), {
+  await updateDoc(doc(db, 'users', userId, 'patients', patientId), removeUndefined({
     ...patient,
     updatedAt: serverTimestamp()
-  });
+  }));
 };
 
 export const deletePatient = async (userId: string, patientId: string): Promise<void> => {
@@ -201,8 +221,8 @@ export const saveContactSubmission = async (submission: Omit<ContactSubmission, 
     return;
   }
 
-  await addDoc(collection(db, 'contactSubmissions'), {
+  await addDoc(collection(db, 'contactSubmissions'), removeUndefined({
     ...submission,
     createdAt: serverTimestamp()
-  });
+  }));
 };
