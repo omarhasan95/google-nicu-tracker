@@ -1,7 +1,11 @@
-'use client';
-
 import React from 'react';
 import { ShieldCheck, Heart } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Privacy Policy - RIMS NICU Tracker",
+  description: "Learn how NICU Tracker collects, isolates, and secures your baby's logs to prioritize family data privacy and encryption compliance.",
+};
 
 export default function Privacy() {
   return (

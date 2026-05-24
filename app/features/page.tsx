@@ -1,5 +1,3 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { 
@@ -14,6 +12,12 @@ import {
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Features - RIMS NICU Tracker",
+  description: "Explore the features of NICU Tracker: Daily care journaling, weight progression charts, feeding logs, and care team rounds Q&A organizer.",
+};
 
 export default function Features() {
   const featureList = [

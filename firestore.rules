@@ -24,6 +24,10 @@ service cloud.firestore {
       match /entries/{entryId} {
         allow read, write: if isOwner(userId);
       }
+
+      match /patients/{patientId} {
+        allow read, write: if isOwner(userId);
+      }
     }
 
     // Rules for public contact submissions

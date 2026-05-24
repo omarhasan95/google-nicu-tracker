@@ -1,8 +1,12 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import { Heart, Sparkles, ShieldAlert, Award, Star } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "About Us - RIMS NICU Tracker",
+  description: "Learn about the mission, values, and developers behind NICU Tracker, a digital companion built with empathy and care to support families during their NICU journey.",
+};
 
 export default function About() {
   return (

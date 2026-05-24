@@ -1,7 +1,11 @@
-'use client';
-
 import React from 'react';
 import { Heart } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: "Terms of Service - RIMS NICU Tracker",
+  description: "Read the Terms of Service for using NICU Tracker, including our critical medical disclaimer, user responsibilities, and data ownership agreements.",
+};
 
 export default function Terms() {
   return (

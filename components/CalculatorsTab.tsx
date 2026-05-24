@@ -361,7 +361,7 @@ export default function CalculatorsTab() {
   return (
     <div className="space-y-8">
       {/* Sub Tabs Selection Header */}
-      <div className="flex flex-wrap bg-slate-100 p-1.5 rounded-2xl border border-slate-200/50 gap-1.5">
+      <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200/50 overflow-x-auto whitespace-nowrap scrollbar-none flex-nowrap gap-1.5 max-w-full">
         {[
           { id: 'fluid', label: 'Fluid & GIR', icon: Droplet },
           { id: 'bilirubin', label: 'Bilirubin (AAP 2022)', icon: TrendingUp },
@@ -376,7 +376,7 @@ export default function CalculatorsTab() {
             <button
               key={tab.id}
               onClick={() => setSubTab(tab.id as any)}
-              className={`flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${subTab === tab.id ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`shrink-0 flex items-center space-x-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer active-press ${subTab === tab.id ? 'bg-white text-blue-600 shadow-sm ring-1 ring-slate-200/50' : 'text-slate-500 hover:text-slate-800'}`}
             >
               <Icon className="w-4 h-4" />
               <span>{tab.label}</span>
@@ -715,11 +715,10 @@ export default function CalculatorsTab() {
                   
                   {/* Gauge bar */}
                   <div className="relative pt-6 pb-2">
-                    {/* Tick label indicators */}
-                    <div className="absolute top-0 inset-x-0 flex justify-between text-[9px] font-bold text-slate-400">
-                      <span>0 mg/dL</span>
-                      <span style={{ left: '45%' }}>Photo ({thresholds.phototherapy})</span>
-                      <span style={{ left: '80%' }}>Exchange ({thresholds.exchange})</span>
+                    <div className="absolute top-0 inset-x-0 text-[10px] font-bold text-slate-400 h-4">
+                      <span className="absolute left-0">0 mg/dL</span>
+                      <span className="absolute transform -translate-x-1/2" style={{ left: '45%' }}>Photo ({thresholds.phototherapy})</span>
+                      <span className="absolute transform -translate-x-1/2" style={{ left: '80%' }}>Exchange ({thresholds.exchange})</span>
                     </div>
 
                     {/* Multi-segmented progress track */}
