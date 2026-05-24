@@ -44,7 +44,8 @@ jobs:
         run: chmod +x android/gradlew
 
       - name: Sync Capacitor Web Assets
-        run: npx cap sync android --verbose || (echo "==== CAPACITOR DIAGNOSTICS ====" && npx cap doctor && exit 1)
+        run: |
+          npx cap sync android --verbose > capacitor_sync_log.txt 2>&1 || (cat capacitor_sync_log.txt && exit 1)
 
       - name: Build Android Debug APK
         run: |
