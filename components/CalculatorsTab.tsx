@@ -132,8 +132,24 @@ function calculateThresholds(gaWeeks: number, ageHours: number, hasRisk: boolean
   };
 }
 
+// --- Preterm Bilirubin (Maisels 2012) Guidelines Nomogram Data ---
+interface PretermBiliThresholds {
+  photoLower: number;     // with risk
+  photoUpper: number;     // without risk
+  exchangeLower: number;  // with risk
+  exchangeUpper: number;  // without risk
+}
+
+const PRETERM_BILI_THRESHOLDS: Record<string, PretermBiliThresholds> = {
+  '<28': { photoLower: 5.0, photoUpper: 6.0, exchangeLower: 11.0, exchangeUpper: 14.0 },
+  '28-29': { photoLower: 6.0, photoUpper: 8.0, exchangeLower: 12.0, exchangeUpper: 14.0 },
+  '30-31': { photoLower: 8.0, photoUpper: 10.0, exchangeLower: 13.0, exchangeUpper: 16.0 },
+  '32-33': { photoLower: 10.0, photoUpper: 12.0, exchangeLower: 15.0, exchangeUpper: 18.0 },
+  '34': { photoLower: 12.0, photoUpper: 14.0, exchangeLower: 17.0, exchangeUpper: 19.0 }
+};
+
 export default function CalculatorsTab() {
-  const [subTab, setSubTab] = useState<'fluid' | 'bilirubin' | 'apgar' | 'gestational' | 'downes' | 'sa' | 'cpapinjury'>('fluid');
+  const [subTab, setSubTab] = useState<'fluid' | 'bilirubin' | 'biliPreterm' | 'apgar' | 'gestational' | 'downes' | 'sa' | 'cpapinjury'>('fluid');
 
   // --- 1. Fluid & GIR Calculator States ---
   const [weightGrams, setWeightGrams] = useState<number>(1500);
@@ -205,6 +221,46 @@ export default function CalculatorsTab() {
     }
     return { label: 'Below Phototherapy Threshold', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: '✅', type: 'safe' };
   }, [tsbMgDl, thresholds]);
+
+  // --- Preterm Bilirubin (<35 weeks) States ---
+  const [pretermGaGroup, setPretermGaGroup] = useState<string>('32-33');
+  const [pretermTsbValue, setPretermTsbValue] = useState<number>(9.5);
+  const [pretermUnitMode, setPretermUnitMode] = useState<'mgdl' | 'umoll'>('mgdl');
+  const [pretermHasRisk, setPretermHasRisk] = useState<boolean>(false);
+
+  // convert input to mg/dL for calculations
+  const pretermTsbMgDl = useMemo(() => {
+    if (pretermUnitMode === 'umoll') {
+      return parseFloat((pretermTsbValue / 17.1).toFixed(2));
+    }
+    return pretermTsbValue;
+  }, [pretermTsbValue, pretermUnitMode]);
+
+  const pretermThresholds = useMemo(() => {
+    const limits = PRETERM_BILI_THRESHOLDS[pretermGaGroup] || PRETERM_BILI_THRESHOLDS['32-33'];
+    const photo = pretermHasRisk ? limits.photoLower : limits.photoUpper;
+    const exchange = pretermHasRisk ? limits.exchangeLower : limits.exchangeUpper;
+    // escalation threshold is 2 mg/dL below exchange
+    const escalation = Math.max(0, exchange - 2.0);
+    return {
+      phototherapy: photo,
+      exchange: exchange,
+      escalation: escalation
+    };
+  }, [pretermGaGroup, pretermHasRisk]);
+
+  const pretermBiliStatus = useMemo(() => {
+    if (pretermTsbMgDl >= pretermThresholds.exchange) {
+      return { label: 'Exchange Transfusion Indicated', color: 'text-rose-700 bg-rose-50 border-rose-200', icon: '🚨', type: 'critical' };
+    } else if (pretermTsbMgDl >= pretermThresholds.escalation) {
+      return { label: 'Escalation of Care / Intensive Photo Indicated', color: 'text-orange-700 bg-orange-50 border-orange-200', icon: '⚠️', type: 'warning' };
+    } else if (pretermTsbMgDl >= pretermThresholds.phototherapy) {
+      return { label: 'Phototherapy Indicated', color: 'text-amber-700 bg-amber-50 border-amber-200', icon: '💡', type: 'photo' };
+    } else if (pretermTsbMgDl >= pretermThresholds.phototherapy - 2.0) {
+      return { label: 'Bilirubin Close to Threshold (Monitor closely)', color: 'text-blue-700 bg-blue-50 border-blue-100', icon: '📈', type: 'monitor' };
+    }
+    return { label: 'Below Phototherapy Threshold', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: '✅', type: 'safe' };
+  }, [pretermTsbMgDl, pretermThresholds]);
 
   // --- 3. APGAR Calculator States ---
   const [apgar, setApgar] = useState({
@@ -365,6 +421,7 @@ export default function CalculatorsTab() {
         {[
           { id: 'fluid', label: 'Fluid & GIR', icon: Droplet },
           { id: 'bilirubin', label: 'Bilirubin (AAP 2022)', icon: TrendingUp },
+          { id: 'biliPreterm', label: 'Preterm Bili (<35w)', icon: TrendingUp },
           { id: 'apgar', label: 'APGAR Score', icon: Activity },
           { id: 'gestational', label: 'GA & Corrected Age', icon: Calendar },
           { id: 'downes', label: 'Downes Score', icon: Activity },
@@ -768,6 +825,186 @@ export default function CalculatorsTab() {
                   {/* Legal disclaimer */}
                   <span className="text-[9px] text-slate-400 italic leading-snug block">
                     * Nomogram curves are derived from the American Academy of Pediatrics (AAP) 2022 Guidelines. Recommendations are for decision-support reference only.
+                  </span>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* --- TAB 2B: PRETERM BILIRUBIN NOMOGRAM CALCULATOR (<35 WEEKS) --- */}
+        {subTab === 'biliPreterm' && (
+          <div className="space-y-8 animate-slide-up">
+            <div>
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <span className="w-9 h-9 bg-amber-50 text-amber-500 rounded-lg flex items-center justify-center text-sm">💡</span>
+                Preterm Hyperbilirubinemia Guidelines (&lt;35 Weeks)
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">Determine consensus-based phototherapy, escalation of care, and exchange transfusion thresholds in infants &lt;35 weeks (Maisels et al. 2012).</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Inputs Panel (Col 5) */}
+              <div className="lg:col-span-5 bg-slate-50 rounded-2xl p-6 border border-slate-200/50 space-y-5">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Patient Index</h3>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Gestational Age at Birth</label>
+                    <select
+                      value={pretermGaGroup}
+                      onChange={(e) => setPretermGaGroup(e.target.value)}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500"
+                    >
+                      <option value="<28">&lt; 28 Weeks</option>
+                      <option value="28-29">28 Weeks to 29 Weeks 6/7</option>
+                      <option value="30-31">30 Weeks to 31 Weeks 6/7</option>
+                      <option value="32-33">32 Weeks to 33 Weeks 6/7</option>
+                      <option value="34">34 Weeks to 34 Weeks 6/7</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 pt-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Total Serum Bilirubin (TSB)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={pretermTsbValue}
+                      onChange={(e) => setPretermTsbValue(Math.max(0, parseFloat(e.target.value) || 0))}
+                      className="flex-1 bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                    <select
+                      value={pretermUnitMode}
+                      onChange={(e) => setPretermUnitMode(e.target.value as any)}
+                      className="bg-white border border-slate-200 rounded-xl px-3 py-1.5 text-xs font-bold text-slate-700 outline-none"
+                    >
+                      <option value="mgdl">mg/dL</option>
+                      <option value="umoll">μmol/L</option>
+                    </select>
+                  </div>
+                  {pretermUnitMode === 'umoll' && (
+                    <span className="text-[10px] text-slate-400 font-medium">Mapped to: {pretermTsbMgDl.toFixed(1)} mg/dL</span>
+                  )}
+                </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Neurotoxicity Risk Factors</h4>
+                  <label className="flex items-start space-x-3 cursor-pointer bg-white p-3 rounded-xl border border-slate-200/50 hover:bg-slate-100/30 transition-all">
+                    <input
+                      type="checkbox"
+                      checked={pretermHasRisk}
+                      onChange={(e) => setPretermHasRisk(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    />
+                    <div className="text-xs leading-relaxed text-slate-600">
+                      <strong className="font-bold text-slate-700 block">Risk Factors Present</strong>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                        Hemolytic disease (Rh/ABO isoimmune disease, G6PD deficiency), clinical instability (sepsis, acidosis, temperature instability, significant respiratory distress, perinatal depression), or albumin &lt; 2.5 g/dL.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Outputs Summary (Col 7) */}
+              <div className="lg:col-span-7 space-y-6">
+                
+                {/* Result Recommendation Alert */}
+                <div className={`p-5 rounded-2xl border-2 flex gap-3 text-xs leading-relaxed ${pretermBiliStatus.color} animate-fade-in`}>
+                  <span className="text-2xl shrink-0">{pretermBiliStatus.icon}</span>
+                  <div>
+                    <h4 className="font-black text-sm tracking-tight">{pretermBiliStatus.label}</h4>
+                    <p className="mt-1 font-medium text-[11px] leading-relaxed opacity-90">
+                      {pretermBiliStatus.type === 'safe' && `TSB is below the phototherapy threshold of ${pretermThresholds.phototherapy} mg/dL.`}
+                      {pretermBiliStatus.type === 'monitor' && `TSB (${pretermTsbMgDl.toFixed(1)} mg/dL) is close to the phototherapy threshold of ${pretermThresholds.phototherapy} mg/dL. Monitor levels closely.`}
+                      {pretermBiliStatus.type === 'photo' && `TSB is at or above the phototherapy threshold of ${pretermThresholds.phototherapy} mg/dL. Intensive phototherapy is recommended.`}
+                      {pretermBiliStatus.type === 'warning' && `TSB (${pretermTsbMgDl.toFixed(1)} mg/dL) is within 2 mg/dL of the exchange threshold (${pretermThresholds.exchange} mg/dL). Initiate intensive phototherapy immediately and prepare for escalation of care.`}
+                      {pretermBiliStatus.type === 'critical' && `TSB is at or above the exchange transfusion threshold of ${pretermThresholds.exchange} mg/dL. Critical emergency intervention is indicated.`}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Threshold values card */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-3.5 text-center">
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wide">Phototherapy</span>
+                    <strong className="text-lg font-black text-slate-700 block mt-1">{pretermThresholds.phototherapy}</strong>
+                    <span className="text-[9px] text-slate-400 font-semibold">mg/dL</span>
+                  </div>
+
+                  <div className="bg-orange-50 border border-orange-100 rounded-xl p-3.5 text-center">
+                    <span className="text-[10px] text-orange-600 font-bold block uppercase tracking-wide">Escalation Limit</span>
+                    <strong className="text-lg font-black text-orange-700 block mt-1">{pretermThresholds.escalation}</strong>
+                    <span className="text-[9px] text-orange-400 font-semibold">mg/dL</span>
+                  </div>
+
+                  <div className="bg-rose-50 border border-rose-100 rounded-xl p-3.5 text-center">
+                    <span className="text-[10px] text-rose-600 font-bold block uppercase tracking-wide">Exchange Limit</span>
+                    <strong className="text-lg font-black text-rose-700 block mt-1">{pretermThresholds.exchange}</strong>
+                    <span className="text-[9px] text-rose-400 font-semibold">mg/dL</span>
+                  </div>
+                </div>
+
+                {/* Linear Gauge Visualizer */}
+                <div className="bg-white rounded-2xl border border-slate-200/60 p-5 space-y-4">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TSB Relative Indicator</h4>
+                  
+                  {/* Gauge bar */}
+                  <div className="relative pt-6 pb-2">
+                    <div className="absolute top-0 inset-x-0 text-[10px] font-bold text-slate-400 h-4">
+                      <span className="absolute left-0">0 mg/dL</span>
+                      <span className="absolute transform -translate-x-1/2" style={{ left: '45%' }}>Photo ({pretermThresholds.phototherapy})</span>
+                      <span className="absolute transform -translate-x-1/2" style={{ left: '80%' }}>Exchange ({pretermThresholds.exchange})</span>
+                    </div>
+
+                    {/* Multi-segmented progress track */}
+                    <div className="h-3 w-full rounded-full flex overflow-hidden bg-slate-100 mt-1">
+                      {/* Safe segment (green) - represents up to phototherapy threshold */}
+                      <div className="bg-emerald-400" style={{ width: '45%' }}></div>
+                      {/* Photo segment (yellow) - represents photo to escalation limit */}
+                      <div className="bg-amber-300" style={{ width: '25%' }}></div>
+                      {/* Escalation segment (orange) - represents escalation to exchange */}
+                      <div className="bg-orange-400" style={{ width: '10%' }}></div>
+                      {/* Critical segment (red) - above exchange */}
+                      <div className="bg-rose-500" style={{ width: '20%' }}></div>
+                    </div>
+
+                    {/* Current Bilirubin pin indicator */}
+                    {(() => {
+                      let percent = 0;
+                      if (pretermTsbMgDl <= pretermThresholds.phototherapy) {
+                        percent = (pretermTsbMgDl / (pretermThresholds.phototherapy || 1)) * 45;
+                      } else if (pretermTsbMgDl <= pretermThresholds.exchange) {
+                        const range = pretermThresholds.exchange - pretermThresholds.phototherapy;
+                        const factor = range === 0 ? 0 : (pretermTsbMgDl - pretermThresholds.phototherapy) / range;
+                        percent = 45 + factor * 35; // 45% to 80%
+                      } else {
+                        const overLimit = pretermTsbMgDl - pretermThresholds.exchange;
+                        const scale = pretermThresholds.exchange * 0.3; // max visual buffer is 30% over exchange
+                        const factor = Math.min(1, overLimit / scale);
+                        percent = 80 + factor * 20; // 80% to 100%
+                      }
+                      
+                      return (
+                        <div 
+                          className="absolute bottom-1.5 flex flex-col items-center transform -translate-x-1/2 transition-all duration-300 z-10"
+                          style={{ left: `${Math.max(2, Math.min(98, percent))}%` }}
+                        >
+                          <span className="bg-slate-800 text-white font-extrabold text-[9px] px-1.5 py-0.5 rounded shadow-md whitespace-nowrap">
+                            TSB: {pretermTsbMgDl.toFixed(1)}
+                          </span>
+                          <div className="w-1.5 h-3 bg-slate-800 mt-0.5 clip-triangle"></div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Legal disclaimer */}
+                  <span className="text-[9px] text-slate-400 italic leading-snug block">
+                    * Threshold values are derived from the Maisels et al. (2012) Preterm Hyperbilirubinemia Consensus Guidelines. Operational decisions should always depend on clinical correlation and institutional protocol.
                   </span>
                 </div>
 
