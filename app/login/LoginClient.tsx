@@ -31,7 +31,19 @@ export default function LoginClient() {
       router.push('/dashboard');
     } catch (err: any) {
       console.error("Google login error:", err);
-      setErrorMsg("Google Sign-In failed. Please try again.");
+      let message = "Google Sign-In failed. Please try again.";
+      if (err.code === 'auth/popup-blocked') {
+        message = "Sign-in popup was blocked by your browser. Please enable popups/redirects for this site and try again.";
+      } else if (err.code === 'auth/unauthorized-domain') {
+        message = `This domain (${typeof window !== 'undefined' ? window.location.hostname : ''}) is not authorized for Google Sign-In in the Firebase console. Please add it to your Firebase Authorized Domains list.`;
+      } else if (err.code === 'auth/popup-closed-by-user') {
+        message = "The sign-in popup was closed before completing authentication. Please try again.";
+      } else if (err.code === 'auth/operation-not-allowed') {
+        message = "Google Sign-In is not enabled as a Sign-in provider in your Firebase Console (Authentication > Sign-in method).";
+      } else if (err.message) {
+        message = `Google Sign-In failed: ${err.message} (${err.code || 'unknown'})`;
+      }
+      setErrorMsg(message);
     } finally {
       setIsSubmitting(false);
     }
