@@ -670,9 +670,10 @@ export default function Dashboard() {
       }
       closeFormModal();
       await fetchPatientsList();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      triggerToast('Error saving patient record', 'error');
+      const msg = error?.message ? ` (${error.message})` : '';
+      triggerToast(`Error saving patient record${msg}`, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -684,9 +685,10 @@ export default function Dashboard() {
       await deletePatient(user.uid, confirmDelete.id);
       triggerToast('Patient record deleted', 'success');
       await fetchPatientsList();
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      triggerToast('Failed to delete patient', 'error');
+      const msg = error?.message ? ` (${error.message})` : '';
+      triggerToast(`Failed to delete patient${msg}`, 'error');
     } finally {
       setConfirmDelete(null);
     }
@@ -718,9 +720,10 @@ export default function Dashboard() {
       await updatePatient(user.uid, patientId, { unit: targetUnit, bedNumber: targetBed });
       triggerToast(`Shifted ${patient.name} to ${targetUnit} Bed ${targetBed}`, 'success');
       await fetchPatientsList();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      triggerToast('Failed to shift bed assignment', 'error');
+      const msg = err?.message ? ` (${err.message})` : '';
+      triggerToast(`Failed to shift bed assignment${msg}`, 'error');
     }
   };
 
@@ -735,9 +738,10 @@ export default function Dashboard() {
       await updatePatient(user.uid, patientId, { rbsLog: updatedLog });
       triggerToast(`RBS logged: ${rbsValue} mg/dL for ${patient.name}`, 'success');
       await fetchPatientsList();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      triggerToast('Failed to log Random Blood Sugar', 'error');
+      const msg = err?.message ? ` (${err.message})` : '';
+      triggerToast(`Failed to log Random Blood Sugar${msg}`, 'error');
     }
   };
 
