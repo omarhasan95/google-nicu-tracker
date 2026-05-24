@@ -48,7 +48,7 @@ jobs:
 
       - name: Sync Capacitor Web Assets
         run: |
-          npx cap sync android --verbose > capacitor_sync_log.txt 2>&1
+          npx cap sync android > capacitor_sync_log.txt 2>&1
 
       - name: Commit Error Logs on Failure
         if: failure()
