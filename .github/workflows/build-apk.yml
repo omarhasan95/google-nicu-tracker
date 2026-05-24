@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     name: Build Android APK
@@ -45,7 +48,17 @@ jobs:
 
       - name: Sync Capacitor Web Assets
         run: |
-          npx cap sync android --verbose > capacitor_sync_log.txt 2>&1 || (cat capacitor_sync_log.txt && exit 1)
+          npx cap sync android --verbose > capacitor_sync_log.txt 2>&1
+
+      - name: Commit Error Logs on Failure
+        if: failure()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          cp capacitor_sync_log.txt sync_error.log
+          git add sync_error.log
+          git commit -m "chore: commit sync error log from failing CI run [skip ci]"
+          git push origin main
 
       - name: Build Android Debug APK
         run: |
