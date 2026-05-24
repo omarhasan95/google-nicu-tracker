@@ -16,7 +16,7 @@ import { BabyProfile, DailyEntry, ContactSubmission, Patient } from '../types';
 
 // Check if Firebase is running in mock mode
 export const isMockMode = (): boolean => {
-  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDajtoLwBLW1iOplCcKYsyhXn2qsgbVWLU";
   return !apiKey || apiKey === 'mock-api-key' || apiKey === '';
 };
 
