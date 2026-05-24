@@ -1852,7 +1852,8 @@ export default function Dashboard() {
 
             {/* Patients List Grid */}
             <div className="bg-white rounded-3xl shadow-sm border border-slate-200/60 overflow-hidden">
-              <div className="overflow-x-auto text-left">
+              {/* Desktop Table View */}
+              <div className="hidden md:block overflow-x-auto text-left">
                 <table className="w-full text-left border-collapse text-xs">
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100 text-slate-500 text-[11px] uppercase tracking-widest font-bold">
@@ -1962,6 +1963,117 @@ export default function Dashboard() {
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              {/* Mobile and Tablet card-based view */}
+              <div className="md:hidden divide-y divide-slate-100 text-xs">
+                {cultureFilteredPatients.length === 0 ? (
+                  <div className="p-16 text-center text-slate-500">
+                    <span className="text-4xl mb-3 opacity-60">📭</span>
+                    <p className="text-base font-bold text-slate-800">No registry records found</p>
+                    <p className="text-xs text-slate-400 mt-1">Try changing your search or filter.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 text-left animate-slide-up">
+                    {cultureFilteredPatients.map(patient => (
+                      <div key={patient.id} className="bg-slate-50/50 p-4.5 rounded-3xl border border-slate-200/50 flex flex-col justify-between space-y-3 shadow-sm hover:border-slate-350 transition-all hover:bg-white">
+                        
+                        {/* Demographics Header */}
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="font-bold text-slate-800 text-sm">{patient.name}</div>
+                            <span className="font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[11px] text-slate-600 border border-slate-200 mt-1 inline-block">
+                              #{patient.uhid}
+                            </span>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className={`text-[11px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${patient.unit === 'SNCU' ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-indigo-50 text-indigo-700 border border-indigo-100'}`}>
+                              {patient.unit}
+                            </span>
+                            {patient.bedNumber !== undefined && (
+                              <span className="text-[10px] text-slate-500 font-bold bg-slate-50 border border-slate-200 px-1.5 py-0.5 rounded-full mt-1">
+                                Bed {patient.bedNumber}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Culture Status & Organism */}
+                        <div className="bg-white p-3 rounded-2xl border border-slate-200/60 space-y-2">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-slate-400 uppercase tracking-wide text-[10px] font-bold">Culture Outcome</span>
+                            {patient.culturePositive ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-250 animate-pulse-slow">
+                                🦠 Positive
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-50 text-slate-400 border border-slate-200">
+                                ⚪ Neg/Pending
+                              </span>
+                            )}
+                          </div>
+                          {patient.culturePositive ? (
+                            <div>
+                              <span className="text-slate-400 block uppercase tracking-wide text-[10px] font-bold">Organism Pathogen</span>
+                              <strong className="text-rose-650 text-xs font-extrabold">
+                                {patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}
+                              </strong>
+                            </div>
+                          ) : (
+                            <div className="text-slate-450 italic text-[10px]">No growth detected.</div>
+                          )}
+                        </div>
+
+                        {/* Antibiotic Sensitivities list */}
+                        {patient.culturePositive && (
+                          <div className="bg-white p-3 rounded-2xl border border-slate-200/60 space-y-2">
+                            <span className="text-slate-400 block uppercase tracking-wide text-[10px] font-bold">Sensitivities</span>
+                            <div className="flex flex-wrap gap-2">
+                              {patient.cultureSensitivity1 && patient.cultureSensitivity1 !== 'None' && (
+                                <div className="inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
+                                  <span className="font-semibold text-slate-600 text-[10px]">{patient.cultureSensitivity1}:</span>
+                                  <span className={`px-1 rounded text-[9px] font-black uppercase ${
+                                    patient.cultureSensitivity1Pattern === 'S' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' :
+                                    patient.cultureSensitivity1Pattern === 'I' ? 'bg-amber-50 text-amber-700 border border-amber-250' :
+                                    'bg-rose-50 text-rose-700 border border-rose-250'
+                                  }`}>
+                                    {patient.cultureSensitivity1Pattern || 'N/A'}
+                                  </span>
+                                </div>
+                              )}
+                              {patient.cultureSensitivity2 && patient.cultureSensitivity2 !== 'None' && (
+                                <div className="inline-flex items-center gap-1 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-100">
+                                  <span className="font-semibold text-slate-600 text-[10px]">{patient.cultureSensitivity2}:</span>
+                                  <span className={`px-1 rounded text-[9px] font-black uppercase ${
+                                    patient.cultureSensitivity2Pattern === 'S' ? 'bg-emerald-50 text-emerald-700 border border-emerald-250' :
+                                    patient.cultureSensitivity2Pattern === 'I' ? 'bg-amber-50 text-amber-700 border border-amber-250' :
+                                    'bg-rose-50 text-rose-700 border border-rose-250'
+                                  }`}>
+                                    {patient.cultureSensitivity2Pattern || 'N/A'}
+                                  </span>
+                                </div>
+                              )}
+                              {!((patient.cultureSensitivity1 && patient.cultureSensitivity1 !== 'None') || (patient.cultureSensitivity2 && patient.cultureSensitivity2 !== 'None')) && (
+                                <span className="text-slate-400 italic text-[10px]">No sensitivities logged.</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Action buttons */}
+                        <div className="pt-2 border-t border-slate-100 flex justify-end">
+                          <button
+                            onClick={() => openFormModal(patient, undefined, undefined, 'culture')}
+                            className="w-full px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-650 rounded-xl text-xs font-black tracking-wide uppercase transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                          >
+                            🧬 Log / Edit Culture
+                          </button>
+                        </div>
+
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
