@@ -116,6 +116,10 @@ h1, h2, h3, h4, h5, h6 {
   transition: all 0.2s ease-in-out;
 }
 
+.input-field.pl-10 {
+  padding-left: 2.5rem;
+}
+
 .input-field:focus {
   border-color: #4a7a7c;
   box-shadow: 0 0 0 3px rgba(74, 122, 124, 0.15);
