@@ -41,7 +41,7 @@ jobs:
           NEXT_PUBLIC_FIREBASE_APP_ID: "1:384409007218:web:2a0972395c856f56c07eeb"
 
       - name: Sync Capacitor Web Assets
-        run: npx cap sync
+        run: npx cap sync android --verbose || (echo "==== CAPACITOR DIAGNOSTICS ====" && npx cap doctor && exit 1)
 
       - name: Make Gradle Wrapper Executable
         run: chmod +x android/gradlew
