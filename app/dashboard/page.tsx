@@ -172,6 +172,9 @@ export default function Dashboard() {
   const [formStatus, setFormStatus] = useState('Admitted');
   const [formOutcomeDate, setFormOutcomeDate] = useState('');
   const [formNotes, setFormNotes] = useState('');
+  const [formGestationalAgeWeeks, setFormGestationalAgeWeeks] = useState<number>(38);
+  const [formGestationalAgeDays, setFormGestationalAgeDays] = useState<number>(0);
+  const [formHasNeuroRisk, setFormHasNeuroRisk] = useState<boolean>(false);
 
   // Culture Positivity Form States
   const [formCulturePositive, setFormCulturePositive] = useState(false);
@@ -583,6 +586,9 @@ export default function Dashboard() {
       setFormStatus(patient.status || 'Admitted');
       setFormOutcomeDate(patient.outcomeDate || '');
       setFormNotes(patient.notes || '');
+      setFormGestationalAgeWeeks(patient.gestationalAgeWeeks !== undefined ? patient.gestationalAgeWeeks : 38);
+      setFormGestationalAgeDays(patient.gestationalAgeDays !== undefined ? patient.gestationalAgeDays : 0);
+      setFormHasNeuroRisk(patient.hasNeuroRisk || false);
       
       setFormCulturePositive(patient.culturePositive || false);
       setFormCultureOrganism(patient.cultureOrganism || 'Klebsiella pneumoniae');
@@ -608,7 +614,10 @@ export default function Dashboard() {
       setFormStatus('Admitted');
       setFormOutcomeDate('');
       setFormNotes('');
-
+      setFormGestationalAgeWeeks(38);
+      setFormGestationalAgeDays(0);
+      setFormHasNeuroRisk(false);
+ 
       setFormCulturePositive(false);
       setFormCultureOrganism('Klebsiella pneumoniae');
       setFormCultureOrganismOther('');
@@ -650,6 +659,9 @@ export default function Dashboard() {
       status: formStatus as any,
       outcomeDate: formStatus !== 'Admitted' ? formOutcomeDate : undefined,
       bedNumber: (formUnit === 'NICU 1' || formUnit === 'NICU 2') && formBedNumber !== '' ? Number(formBedNumber) : undefined,
+      gestationalAgeWeeks: formGestationalAgeWeeks !== undefined ? Number(formGestationalAgeWeeks) : undefined,
+      gestationalAgeDays: formGestationalAgeDays !== undefined ? Number(formGestationalAgeDays) : undefined,
+      hasNeuroRisk: formHasNeuroRisk,
       notes: formNotes || undefined,
       culturePositive: formCulturePositive,
       cultureOrganism: formCulturePositive ? formCultureOrganism : undefined,
@@ -747,6 +759,24 @@ export default function Dashboard() {
       console.error(err);
       const msg = err?.message ? ` (${err.message})` : '';
       triggerToast(`Failed to log Random Blood Sugar${msg}`, 'error');
+    }
+  };
+
+  const handleAddBilirubin = async (patientId: string, bilirubinValue: number) => {
+    if (!user) return;
+    const patient = patients.find(p => p.id === patientId);
+    if (!patient) return;
+
+    try {
+      const currentLog = patient.bilirubinLog || [];
+      const updatedLog = [...currentLog, { value: bilirubinValue, timestamp: new Date().toISOString() }];
+      await updatePatient(user.uid, patientId, { bilirubinLog: updatedLog });
+      triggerToast(`Bilirubin logged: ${bilirubinValue} mg/dL for ${patient.name}`, 'success');
+      await fetchPatientsList();
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.message ? ` (${err.message})` : '';
+      triggerToast(`Failed to log Serum Bilirubin${msg}`, 'error');
     }
   };
 
@@ -1765,6 +1795,7 @@ export default function Dashboard() {
               onViewPatient={(patient) => openFormModal(patient)}
               onShiftPatient={handleShiftPatient}
               onAddRbs={handleAddRbs}
+              onAddBilirubin={handleAddBilirubin}
             />
           </div>
         )}
@@ -2031,6 +2062,52 @@ export default function Dashboard() {
                     onChange={(e) => setFormAdmissionDate(e.target.value)}
                     className="w-full bg-slate-100 border-2 border-transparent rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:bg-white focus:border-blue-500 transition-all"
                   />
+                </div>
+
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4 md:col-span-2">
+                  <h4 className="text-xs font-black text-slate-700 uppercase tracking-wide border-b border-slate-200/60 pb-2">Gestational Age & Hyperbilirubinemia Risk</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Gestational Age (Weeks) *</label>
+                      <input 
+                        required 
+                        type="number" 
+                        min={22}
+                        max={44}
+                        placeholder="e.g. 38"
+                        value={formGestationalAgeWeeks}
+                        onChange={(e) => setFormGestationalAgeWeeks(Number(e.target.value))}
+                        className="w-full bg-white border-2 border-transparent rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:bg-white transition-all shadow-sm"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-2">Gestational Age (Days)</label>
+                      <select 
+                        value={formGestationalAgeDays}
+                        onChange={(e) => setFormGestationalAgeDays(Number(e.target.value))}
+                        className="w-full bg-white border-2 border-transparent rounded-xl p-3 text-sm font-bold text-slate-800 outline-none focus:border-blue-500 transition-all shadow-sm"
+                      >
+                        {[0, 1, 2, 3, 4, 5, 6].map(d => (
+                          <option key={d} value={d}>{d} day{d !== 1 ? 's' : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-2.5 pt-2">
+                    <input 
+                      type="checkbox" 
+                      id="formHasNeuroRisk"
+                      checked={formHasNeuroRisk}
+                      onChange={(e) => setFormHasNeuroRisk(e.target.checked)}
+                      className="w-4 h-4 rounded border-slate-350 text-blue-600 focus:ring-blue-500/20 mt-0.5 cursor-pointer"
+                    />
+                    <label htmlFor="formHasNeuroRisk" className="text-xs font-bold text-slate-700 cursor-pointer select-none leading-tight">
+                      Hyperbilirubinemia Neurotoxicity Risk Factors present
+                      <span className="block text-[10px] text-slate-400 font-normal mt-0.5 leading-snug">
+                        (e.g., isoimmune hemolytic disease, G6PD deficiency, asphyxia, sepsis, temp instability, lethargy)
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 space-y-4">

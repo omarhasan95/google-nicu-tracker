@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from 'react';
 import { Patient } from '../types';
 import { Bed, User, Clock, Plus, ShieldCheck, AlertCircle, Droplet, ChevronDown, ChevronUp } from 'lucide-react';
+import { calculateBiliCutoffs } from '../lib/bilirubinRules';
 
 interface BedMapTabProps {
   patients: Patient[];
@@ -10,6 +11,7 @@ interface BedMapTabProps {
   onViewPatient: (patient: Patient) => void;
   onShiftPatient: (patientId: string, targetUnit: 'NICU 1' | 'NICU 2', targetBedNumber: number) => Promise<void>;
   onAddRbs: (patientId: string, rbsValue: number) => Promise<void>;
+  onAddBilirubin: (patientId: string, bilirubinValue: number) => Promise<void>;
 }
 
 // Helper utilities for date calculations
@@ -34,12 +36,15 @@ export default function BedMapTab({
   onAdmitPatient, 
   onViewPatient,
   onShiftPatient,
-  onAddRbs
+  onAddRbs,
+  onAddBilirubin
 }: BedMapTabProps) {
   const [selectedUnit, setSelectedUnit] = useState<'NICU 1' | 'NICU 2'>('NICU 1');
   const [dragOverBed, setDragOverBed] = useState<number | null>(null);
   const [expandedRbsBabyId, setExpandedRbsBabyId] = useState<string | null>(null);
   const [rbsInputValues, setRbsInputValues] = useState<Record<string, string>>({});
+  const [expandedBiliBabyId, setExpandedBiliBabyId] = useState<string | null>(null);
+  const [biliInputValues, setBiliInputValues] = useState<Record<string, string>>({});
 
   // Group active admitted patients in selected unit by bed number (can be multiple per bed)
   const occupiedMap = useMemo(() => {
@@ -76,14 +81,14 @@ export default function BedMapTab({
   // Row 3: Bed 2, (center nursing desk), Bed 8
   // Row 4 (bottom): Bed 1, (empty), (empty)
   const bedGridPositions = [
-    { bedNum: 1, gridClass: 'sm:col-start-1 sm:row-start-4' },
-    { bedNum: 2, gridClass: 'sm:col-start-1 sm:row-start-3' },
-    { bedNum: 3, gridClass: 'sm:col-start-1 sm:row-start-2' },
-    { bedNum: 4, gridClass: 'sm:col-start-1 sm:row-start-1' },
-    { bedNum: 5, gridClass: 'sm:col-start-2 sm:row-start-1' },
-    { bedNum: 6, gridClass: 'sm:col-start-3 sm:row-start-1' },
-    { bedNum: 7, gridClass: 'sm:col-start-3 sm:row-start-2' },
-    { bedNum: 8, gridClass: 'sm:col-start-3 sm:row-start-3' },
+    { bedNum: 1, gridClass: 'col-start-1 row-start-4' },
+    { bedNum: 2, gridClass: 'col-start-1 row-start-3' },
+    { bedNum: 3, gridClass: 'col-start-1 row-start-2' },
+    { bedNum: 4, gridClass: 'col-start-1 row-start-1' },
+    { bedNum: 5, gridClass: 'col-start-2 row-start-1' },
+    { bedNum: 6, gridClass: 'col-start-3 row-start-1' },
+    { bedNum: 7, gridClass: 'col-start-3 row-start-2' },
+    { bedNum: 8, gridClass: 'col-start-3 row-start-3' },
   ];
 
   return (
@@ -125,23 +130,23 @@ export default function BedMapTab({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Visual Floor Plan Grid */}
-        <div className="lg:col-span-8 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-3 sm:p-8 text-center overflow-x-auto scrollbar-none">
+        <div className="lg:col-span-8 bg-slate-55 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-3 sm:p-8 text-center overflow-x-auto scrollbar-none">
           
           <div className="max-w-3xl mx-auto w-full">
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:grid-rows-4 sm:gap-6">
+            <div className="grid grid-cols-3 grid-rows-4 gap-2 sm:gap-6">
               {/* Central Desk Widget */}
-              <div className="col-span-2 sm:col-span-1 sm:col-start-2 sm:row-start-2 sm:row-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 flex flex-col justify-center items-center text-center space-y-3 hover-lift transition-all duration-300">
-                <div className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5" />
+              <div className="col-start-2 row-start-2 row-span-2 col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-3 hover-lift transition-all duration-300">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
+                  <ShieldCheck className="w-4 sm:w-5 h-4 sm:h-5" />
                 </div>
                 <div>
-                  <span className="text-xs font-black text-slate-400 uppercase tracking-widest block">Nursing Desk</span>
-                  <strong className="text-slate-700 text-xs font-bold block mt-0.5">{selectedUnit} Station</strong>
+                  <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-widest block">Nursing Desk</span>
+                  <strong className="text-slate-700 text-[10px] sm:text-xs font-bold block mt-0.5">{selectedUnit} Station</strong>
                 </div>
-                <div className="border-t border-slate-100 pt-2 w-full">
-                  <div className="text-lg font-black text-blue-600 tracking-tight">{totalPatientsCount} Patient{totalPatientsCount !== 1 ? 's' : ''}</div>
-                  <span className="text-xs text-slate-400 font-bold uppercase tracking-wider block">{totalOccupiedBeds} / 8 Warmers Active</span>
-                  <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mt-1.5">
+                <div className="border-t border-slate-100 pt-1.5 sm:pt-2 w-full">
+                  <div className="text-sm sm:text-lg font-black text-blue-600 tracking-tight">{totalPatientsCount} Patient{totalPatientsCount !== 1 ? 's' : ''}</div>
+                  <span className="text-[9px] sm:text-xs text-slate-400 font-bold uppercase tracking-wider block">{totalOccupiedBeds} / 8 Warmers Active</span>
+                  <div className="w-full bg-slate-100 h-1 sm:h-1.5 rounded-full overflow-hidden mt-1 sm:mt-1.5">
                     <div 
                       className="bg-blue-500 h-full transition-all duration-500" 
                       style={{ width: `${occupancyPercentage}%` }}
@@ -172,23 +177,23 @@ export default function BedMapTab({
                     }}
                     className={`${gridClass} rounded-[1.25rem] sm:rounded-[1.5rem] transition-all duration-300 flex flex-col justify-between items-stretch text-left relative overflow-hidden ${
                       isOccupied 
-                        ? 'bg-white border border-slate-200/85 p-2.5 sm:p-3.5 space-y-2 sm:space-y-3 shadow-sm hover-lift hover:border-slate-350'
-                        : 'border border-dashed border-slate-300 bg-slate-100/40 p-2.5 sm:p-3.5 hover:bg-white hover:border-slate-450 hover:shadow-sm hover:-translate-y-0.5'
+                        ? 'bg-white border border-slate-200/85 p-2 sm:p-3.5 space-y-1.5 sm:space-y-3 shadow-sm hover-lift hover:border-slate-350'
+                        : 'border border-dashed border-slate-300 bg-slate-100/40 p-2 sm:p-3.5 hover:bg-white hover:border-slate-450 hover:shadow-sm hover:-translate-y-0.5'
                     } ${isDragTarget ? 'border-blue-500 border-2 bg-blue-50/30 scale-102 ring-4 ring-blue-100 z-10' : ''}`}
                   >
                     {/* Header Bar */}
-                    <div className="flex justify-between items-center text-[10px] sm:text-xs pb-1.5 border-b border-slate-100">
-                      <span className={`font-black flex items-center gap-1 ${isOccupied ? 'text-slate-800' : 'text-slate-400'}`}>
-                        <Bed className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-500 shrink-0" />
+                    <div className="flex justify-between items-center text-[9px] sm:text-xs pb-1 sm:pb-1.5 border-b border-slate-100">
+                      <span className={`font-black flex items-center gap-0.5 sm:gap-1 ${isOccupied ? 'text-slate-800' : 'text-slate-400'}`}>
+                        <Bed className="w-2.5 sm:w-3.5 h-2.5 sm:h-3.5 text-blue-500 shrink-0" />
                         Bed {bedNum}
                       </span>
                       {isOccupied ? (
                         <span className="flex items-center gap-0.5 sm:gap-1">
-                          <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${bedPatients.length >= 2 ? 'bg-orange-500' : 'bg-blue-500'} animate-pulse`}></span>
-                          <span className="text-[9px] sm:text-xs font-black text-slate-400">{bedPatients.length}/2 slots</span>
+                          <span className={`w-1 sm:w-2 h-1 sm:h-2 rounded-full ${bedPatients.length >= 2 ? 'bg-orange-500' : 'bg-blue-500'} animate-pulse`}></span>
+                          <span className="text-[8px] sm:text-xs font-black text-slate-400">{bedPatients.length}/2 slots</span>
                         </span>
                       ) : (
-                        <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-300"></span>
+                        <span className="w-0.5 h-0.5 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-300"></span>
                       )}
                     </div>
 
@@ -200,6 +205,7 @@ export default function BedMapTab({
                             const ageHours = calculateHoursBetween(patient.dob, new Date().toISOString());
                             const dolString = formatAgeString(ageHours);
                             const isRbsExpanded = expandedRbsBabyId === patient.id;
+                            const isBiliExpanded = expandedBiliBabyId === patient.id;
 
                             return (
                               <div 
@@ -213,31 +219,31 @@ export default function BedMapTab({
                               >
                                 <div className="flex justify-between items-start">
                                   <div className="space-y-0.5">
-                                    <h4 className="text-[10px] sm:text-xs font-black text-slate-800 flex items-center gap-1">
-                                      <span className="text-[9px] sm:text-[10px]">👶</span>
+                                    <h4 className="text-[9px] sm:text-xs font-black text-slate-800 flex items-center gap-0.5 sm:gap-1">
+                                      <span className="text-[8px] sm:text-[10px]">👶</span>
                                       {patient.name}
                                     </h4>
-                                    <p className="text-[9px] sm:text-xs font-bold text-slate-400 flex items-center gap-1 flex-wrap">
-                                      <span>UHID: {patient.uhid}</span>
+                                    <p className="text-[8px] sm:text-xs font-bold text-slate-400 flex items-center gap-1 flex-wrap">
+                                      <span>{patient.uhid}</span>
                                       {patient.culturePositive && (
-                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-100 font-black text-[8px] sm:text-[10px] leading-none" title={`Culture: ${patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}`}>
+                                        <span className="inline-flex items-center gap-0.5 px-0.5 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-100 font-black text-[7px] sm:text-[9px] leading-none" title={`Culture: ${patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}`}>
                                           🦠 POS
                                         </span>
                                       )}
                                     </p>
                                   </div>
                                   <div className="flex items-center gap-1">
-                                    <span className="text-[9px] sm:text-xs font-black text-slate-700 bg-slate-100 px-1 rounded">{dolString}</span>
+                                    <span className="text-[8px] sm:text-xs font-black text-slate-700 bg-slate-100 px-0.5 sm:px-1 rounded">{dolString}</span>
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[9px] sm:text-xs mt-1.5 text-slate-500 font-semibold">
-                                  <span>Dx: <strong className="text-indigo-600 block sm:inline">{patient.diagnosis}</strong></span>
-                                  <div className="flex items-center gap-1">
+                                <div className="flex items-center justify-between text-[8px] sm:text-xs mt-1.5 text-slate-500 font-semibold gap-1">
+                                  <span className="truncate max-w-[45px] sm:max-w-none">Dx: <strong className="text-indigo-600">{patient.diagnosis}</strong></span>
+                                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); onViewPatient(patient); }}
-                                      className="text-slate-400 hover:text-blue-600 text-[9px] sm:text-[11px] uppercase font-black"
+                                      className="text-slate-400 hover:text-blue-600 text-[8px] sm:text-[11px] uppercase font-black"
                                     >
                                       Edit
                                     </button>
@@ -247,11 +253,25 @@ export default function BedMapTab({
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         setExpandedRbsBabyId(isRbsExpanded ? null : patient.id!);
+                                        setExpandedBiliBabyId(null);
                                       }}
-                                      className={`text-rose-505 hover:text-rose-600 text-[9px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
+                                      className={`text-rose-505 hover:text-rose-600 text-[8px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
                                     >
                                       <Droplet className="w-1.5 sm:w-2 h-1.5 sm:h-2 text-rose-550 shrink-0" />
                                       RBS {isRbsExpanded ? '▲' : '▼'}
+                                    </button>
+                                    <span className="text-slate-200">|</span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setExpandedBiliBabyId(isBiliExpanded ? null : patient.id!);
+                                        setExpandedRbsBabyId(null);
+                                      }}
+                                      className={`text-amber-650 hover:text-amber-700 text-[8px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-amber-50 px-1 py-0.5 rounded ${isBiliExpanded ? 'ring-1 ring-amber-250 font-extrabold' : ''}`}
+                                    >
+                                      <Droplet className="w-1.5 sm:w-2 h-1.5 sm:h-2 text-amber-550 shrink-0" />
+                                      Bili {isBiliExpanded ? '▲' : '▼'}
                                     </button>
                                   </div>
                                 </div>
@@ -296,6 +316,54 @@ export default function BedMapTab({
                                           setRbsInputValues(prev => ({ ...prev, [patient.id!]: '' }));
                                         }}
                                         className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-2 py-0.5 rounded text-[10px] sm:text-xs cursor-pointer transition-colors"
+                                      >
+                                        Save
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Bili Sub-panel */}
+                                {isBiliExpanded && (
+                                  <div className="mt-2 bg-amber-50/50 p-1.5 sm:p-2 rounded-xl border border-amber-100 space-y-1.5 text-[8px] sm:text-xs text-left animate-slide-up" onClick={e => e.stopPropagation()}>
+                                    <div className="flex justify-between items-center font-bold text-amber-950">
+                                      <span>Bilirubin Readings</span>
+                                      <span className="text-[7px] sm:text-[10px] text-amber-600">Serum Bili</span>
+                                    </div>
+                                    
+                                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                                      {patient.bilirubinLog && patient.bilirubinLog.length > 0 ? (
+                                        patient.bilirubinLog.slice(-3).reverse().map((log, idx) => (
+                                          <div key={idx} className="flex justify-between items-center bg-white px-1.5 py-0.5 rounded border border-amber-100/50">
+                                            <span className="font-extrabold text-amber-700">{log.value} mg/dL</span>
+                                            <span className="text-[7px] sm:text-[9px] text-slate-450 font-semibold">
+                                              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                          </div>
+                                        ))
+                                      ) : (
+                                        <span className="text-[8px] sm:text-[10px] text-slate-450 italic block">No bilirubin logs.</span>
+                                      )}
+                                    </div>
+
+                                    <div className="flex gap-1 pt-1 border-t border-amber-100">
+                                      <input
+                                        type="number"
+                                        step="0.1"
+                                        placeholder="12.5"
+                                        value={biliInputValues[patient.id!] || ''}
+                                        onChange={(e) => setBiliInputValues(prev => ({ ...prev, [patient.id!]: e.target.value }))}
+                                        className="w-12 bg-white border border-slate-200 rounded px-1 py-0.5 text-[8px] sm:text-xs font-semibold text-slate-800 outline-none"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          const val = parseFloat(biliInputValues[patient.id!] || '');
+                                          if (isNaN(val) || val <= 0) return;
+                                          await onAddBilirubin(patient.id!, val);
+                                          setBiliInputValues(prev => ({ ...prev, [patient.id!]: '' }));
+                                        }}
+                                        className="bg-amber-600 hover:bg-amber-500 text-white font-bold px-2 py-0.5 rounded text-[8px] sm:text-xs cursor-pointer transition-colors"
                                       >
                                         Save
                                       </button>

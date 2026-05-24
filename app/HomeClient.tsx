@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { getPatients } from '../lib/dbService';
 import { Patient } from '../types';
+import { calculateBiliCutoffs } from '../lib/bilirubinRules';
 import { 
   Baby, 
   ShieldCheck, 
@@ -39,6 +40,7 @@ export default function HomeClient() {
   const [loadingPatients, setLoadingPatients] = useState<boolean>(true);
   const [mockUnit, setMockUnit] = useState<'NICU 1' | 'NICU 2'>('NICU 1');
   const [selectedMockBed, setSelectedMockBed] = useState<number>(1);
+  const [showMobileInspector, setShowMobileInspector] = useState<boolean>(false);
 
   // Pre-populated default mock list to display if there's no true registry database records.
   const defaultMockList: Patient[] = useMemo(() => [
@@ -237,47 +239,47 @@ export default function HomeClient() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full space-y-6">
         
         {/* Census Statistics Row */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-left">
+        <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-none snap-x text-left sm:grid sm:grid-cols-4 sm:gap-4 sm:pb-0">
           
-          <div className="bg-white rounded-2xl p-5 border-t-4 border-t-[#4a7a7c] border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-28 hover-lift cursor-default animate-fade-in">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">NICU Census</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-t-4 border-t-[#4a7a7c] border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-24 sm:h-28 hover-lift cursor-default animate-fade-in w-[150px] sm:w-auto shrink-0 snap-start">
+            <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider block">NICU Census</span>
             <div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">{stats.currentCensus} Babies</h3>
-              <span className="text-xs text-[#82a596] font-semibold block mt-0.5">Admitted cases in ward</span>
+              <h3 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight">{stats.currentCensus} Babies</h3>
+              <span className="text-[10px] sm:text-xs text-[#82a596] font-semibold block mt-0.5">Admitted in ward</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border-t-4 border-t-blue-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-28 hover-lift cursor-default animate-fade-in">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">Bed Occupancy Rate</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-t-4 border-t-blue-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-24 sm:h-28 hover-lift cursor-default animate-fade-in w-[150px] sm:w-auto shrink-0 snap-start">
+            <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider block">Occupancy Rate</span>
             <div>
-              <h3 className="text-2xl font-black text-blue-600 tracking-tight">{stats.occupancyRate}%</h3>
-              <span className="text-xs text-slate-400 font-semibold block mt-0.5">16 Warmers Available</span>
+              <h3 className="text-lg sm:text-2xl font-black text-blue-600 tracking-tight">{stats.occupancyRate}%</h3>
+              <span className="text-[10px] sm:text-xs text-slate-400 font-semibold block mt-0.5">16 Warmers Available</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border-t-4 border-t-amber-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-28 hover-lift cursor-default animate-fade-in">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">Observe Alerts</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-t-4 border-t-amber-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-24 sm:h-28 hover-lift cursor-default animate-fade-in w-[150px] sm:w-auto shrink-0 snap-start">
+            <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider block">Observe Alerts</span>
             <div>
-              <h3 className="text-2xl font-black text-amber-600 tracking-tight">{stats.observeCount} Cases</h3>
-              <span className="text-xs text-amber-700/80 font-semibold block mt-0.5">Vigilant clinical status</span>
+              <h3 className="text-lg sm:text-2xl font-black text-amber-600 tracking-tight">{stats.observeCount} Cases</h3>
+              <span className="text-[10px] sm:text-xs text-amber-700/80 font-semibold block mt-0.5">Vigilant status</span>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-5 border-t-4 border-t-indigo-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-28 hover-lift cursor-default animate-fade-in">
-            <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">Average Stay</span>
+          <div className="bg-white rounded-2xl p-4 sm:p-5 border-t-4 border-t-indigo-500 border-x border-b border-slate-200/60 shadow-sm flex flex-col justify-between h-24 sm:h-28 hover-lift cursor-default animate-fade-in w-[150px] sm:w-auto shrink-0 snap-start">
+            <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider block">Average Stay</span>
             <div>
-              <h3 className="text-2xl font-black text-slate-800 tracking-tight">{stats.avgStay} Days</h3>
-              <span className="text-xs text-[#82a596] font-semibold block mt-0.5">Discharge history log</span>
+              <h3 className="text-lg sm:text-2xl font-black text-slate-800 tracking-tight">{stats.avgStay} Days</h3>
+              <span className="text-[10px] sm:text-xs text-[#82a596] font-semibold block mt-0.5">Discharge history log</span>
             </div>
           </div>
 
         </div>
 
         {/* Dashboard Panels Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 lg:gap-8 items-start">
           
           {/* Left Side: Visual Bed Layout Floor Plan (Col 8) */}
-          <div className="lg:col-span-8 bg-white border border-slate-200/60 rounded-3xl p-6 shadow-sm text-left space-y-6">
+          <div className="md:col-span-7 lg:col-span-8 bg-white border border-slate-200/60 rounded-3xl p-4 sm:p-6 shadow-sm text-left space-y-6">
             
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-4">
               <div>
@@ -308,17 +310,17 @@ export default function HomeClient() {
             </div>
 
             {/* U-Shaped Ward Layout Grid */}
-            <div key={mockUnit} className="bg-slate-50/50 rounded-2xl p-6 border border-slate-200/40 animate-slide-up overflow-x-auto scrollbar-none">
-              <div className="max-w-2xl mx-auto min-w-[550px] sm:min-w-0">
+            <div key={mockUnit} className="bg-slate-50/50 rounded-2xl p-3 sm:p-6 border border-slate-200/40 animate-slide-up overflow-x-auto scrollbar-none">
+              <div className="max-w-2xl mx-auto w-full">
                 
-                {/* 3 columns x 4 rows layout grid */}
-                <div className="grid grid-cols-3 grid-rows-4 gap-4 sm:gap-5">
+                {/* 3-column U-shaped layout grid on all screen sizes */}
+                <div className="grid grid-cols-3 grid-rows-4 gap-2 sm:gap-5">
                   
                   {/* Central Nursing Station Card */}
-                  <div className="col-start-2 row-start-2 row-span-2 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4 flex flex-col justify-center items-center text-center space-y-2 hover-lift transition-all duration-300">
+                  <div className="col-start-2 row-start-2 row-span-2 col-span-1 bg-white rounded-2xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-2 hover-lift transition-all duration-300">
                     <span className="text-xs">👩‍⚕️</span>
-                    <strong className="text-slate-700 text-xs font-bold block">{mockUnit} Desk</strong>
-                    <div className="text-xs text-slate-450 font-bold uppercase tracking-wider block">
+                    <strong className="text-slate-700 text-[10px] sm:text-xs font-bold block">{mockUnit} Desk</strong>
+                    <div className="text-[9px] sm:text-xs text-slate-450 font-bold uppercase tracking-wider block">
                       {Object.keys(occupiedMap).length} / 8 Warmers
                     </div>
                   </div>
@@ -344,8 +346,11 @@ export default function HomeClient() {
                     return (
                       <button
                         key={num}
-                        onClick={() => setSelectedMockBed(num)}
-                        className={`${grid} rounded-2xl border text-left transition-all duration-300 p-3.5 flex flex-col justify-between h-20 sm:h-22 cursor-pointer relative overflow-hidden active-press ${
+                        onClick={() => {
+                          setSelectedMockBed(num);
+                          setShowMobileInspector(true);
+                        }}
+                        className={`${grid} rounded-2xl border text-left transition-all duration-300 p-2 sm:p-3.5 flex flex-col justify-between min-h-[4.5rem] sm:min-h-[5.5rem] sm:h-22 cursor-pointer relative overflow-hidden active-press ${
                           isSelected 
                             ? 'border-blue-500 ring-4 ring-blue-100 bg-white shadow-md z-10 animate-pulse-glow-blue' 
                             : !isOccupied 
@@ -356,23 +361,23 @@ export default function HomeClient() {
                         }`}
                       >
                         <div className="flex justify-between items-center w-full">
-                          <span className="text-xs font-black text-slate-500">Bed {num}</span>
+                          <span className="text-[10px] sm:text-xs font-black text-slate-500">Bed {num}</span>
                           <span className={`w-1.5 h-1.5 rounded-full ${
                             !isOccupied ? 'bg-slate-300' : hasObserve ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'
                           }`}></span>
                         </div>
                         
                         {isOccupied ? (
-                          <div className="mt-2 w-full">
-                            <strong className="text-xs text-slate-800 block truncate">
+                          <div className="mt-1 sm:mt-2 w-full">
+                            <strong className="text-[10px] sm:text-xs text-slate-800 block truncate">
                               {bedPatients.length === 1 ? bedPatients[0].name : `${bedPatients[0].name} + 1`}
                             </strong>
-                            <span className="text-[11px] text-[#82a596] font-bold block truncate">
+                            <span className="text-[9px] sm:text-[11px] text-[#82a596] font-bold block truncate">
                               {bedPatients[0].diagnosis}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic block mt-auto">Vacant</span>
+                          <span className="text-[10px] sm:text-xs text-slate-400 italic block mt-auto">Vacant</span>
                         )}
                       </button>
                     );
@@ -386,10 +391,10 @@ export default function HomeClient() {
           </div>
 
           {/* Right Side: Bed details & Recent Events (Col 4) */}
-          <div className="lg:col-span-4 space-y-6 text-left">
+          <div className="md:col-span-5 lg:col-span-4 space-y-6 text-left">
             
             {/* Selected Warmer Inspect Panel */}
-            <div key={`${mockUnit}-${selectedMockBed}`} className="bg-white rounded-3xl border border-slate-200/60 shadow-sm p-6 space-y-4 animate-zoom-in">
+            <div key={`${mockUnit}-${selectedMockBed}`} className="hidden md:block bg-white rounded-3xl border border-slate-200/60 shadow-sm p-6 space-y-4 animate-zoom-in">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Warmer Inspection</h3>
               
               <div className="flex justify-between items-center pb-2.5 border-b border-slate-100">
@@ -417,12 +422,31 @@ export default function HomeClient() {
               ) : (
                 <div className="space-y-4 divide-y divide-slate-100">
                   {selectedBedPatients.map((patient, index) => {
-                    const ageHours = calculateHoursBetween(patient.dob, new Date().toISOString());
+                    const ageHours = calculateHoursBetween(patient.dob, new Date().toISOString()) || 0;
                     const dolString = formatAgeString(ageHours);
                     const lastRbs = patient.rbsLog && patient.rbsLog.length > 0 ? `${patient.rbsLog[patient.rbsLog.length - 1].value} mg/dL` : 'N/A';
+                    
+                    const gaWeeks = patient.gestationalAgeWeeks !== undefined ? patient.gestationalAgeWeeks : 38;
+                    const gaDays = patient.gestationalAgeDays !== undefined ? patient.gestationalAgeDays : 0;
+                    const hasRisk = patient.hasNeuroRisk || false;
+
+                    const lastBiliLog = patient.bilirubinLog && patient.bilirubinLog.length > 0 ? patient.bilirubinLog[patient.bilirubinLog.length - 1] : null;
+                    const lastBiliValue = lastBiliLog ? `${lastBiliLog.value} mg/dL` : 'N/A';
+
+                    // Compute autothresholds if bilirubin value is logged
+                    let cutoffsText = '';
+                    let classificationText = '';
+                    let classificationColor = '';
+                    if (lastBiliLog) {
+                      const biliHours = calculateHoursBetween(patient.dob, lastBiliLog.timestamp) || ageHours;
+                      const res = calculateBiliCutoffs(gaWeeks, biliHours, hasRisk, lastBiliLog.value);
+                      cutoffsText = `Photo: ≥${res.phototherapy} | Exchange: ≥${res.exchange}`;
+                      classificationText = res.classification.label;
+                      classificationColor = res.classification.color;
+                    }
 
                     return (
-                      <div key={patient.id} className={`space-y-3 ${index > 0 ? 'pt-4' : ''}`}>
+                      <div key={patient.id} className={`space-y-3 ${index > 0 ? 'pt-4 border-t border-slate-100' : ''}`}>
                         {selectedBedPatients.length > 1 && (
                           <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-black">
                             Baby #{index + 1}
@@ -435,6 +459,10 @@ export default function HomeClient() {
                           </div>
                           <div>
                             <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Gestational Age</span>
+                            <strong className="text-slate-800">{patient.gestationalAgeWeeks !== undefined ? `${patient.gestationalAgeWeeks}w ${patient.gestationalAgeDays || 0}d` : 'N/A'}</strong>
+                          </div>
+                          <div>
+                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Current DOL</span>
                             <strong className="text-slate-800">{dolString}</strong>
                           </div>
                           <div>
@@ -442,13 +470,31 @@ export default function HomeClient() {
                             <strong className="text-slate-800">{patient.uhid}</strong>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Blood Glucose</span>
+                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Blood Glucose (RBS)</span>
                             <strong className="text-rose-650">{lastRbs}</strong>
                           </div>
-                          <div className="col-span-2">
+                          <div>
+                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Serum Bilirubin</span>
+                            <strong className="text-amber-700">{lastBiliValue}</strong>
+                          </div>
+                          {lastBiliLog && (
+                            <div className="col-span-2">
+                              <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Bili Thresholds</span>
+                              <strong className="text-slate-700 font-bold block">{cutoffsText}</strong>
+                            </div>
+                          )}
+                          <div className={lastBiliLog ? 'col-span-2' : ''}>
                             <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Primary Diagnosis</span>
                             <strong className="text-indigo-600">{patient.diagnosis}</strong>
                           </div>
+                          {lastBiliLog && (
+                            <div className="col-span-2">
+                              <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Bili Clinical Status</span>
+                              <span className={`inline-block px-2.5 py-1 mt-1 rounded-xl text-[11px] font-extrabold border ${classificationColor}`}>
+                                {classificationText}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -504,6 +550,131 @@ export default function HomeClient() {
       <div className="bg-[#fcfdfd] py-4 border-t border-[#e2ecec] text-center text-xs text-[#82a596] px-4 font-medium italic mt-auto shrink-0">
         * RIMS NICU Tracker is a read-only ward monitoring portal. Medical decisions or clinical calibrations must be verified directly with physical monitors and department policies.
       </div>
+
+      {/* Mobile Inspector Modal Overlay */}
+      {showMobileInspector && selectedBedPatients.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center p-4 bg-slate-900/60 backdrop-blur-sm md:hidden animate-fade-in" onClick={() => setShowMobileInspector(false)}>
+          <div className="bg-white rounded-t-3xl w-full max-w-lg p-6 shadow-xl border border-slate-200 animate-slide-up flex flex-col max-h-[85vh] text-left" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center pb-3 border-b border-slate-100">
+              <h3 className="text-xs font-black text-slate-400 uppercase tracking-wider">Warmer Inspection</h3>
+              <button 
+                onClick={() => setShowMobileInspector(false)}
+                className="text-slate-400 hover:text-slate-650 text-xs font-bold px-3 py-1 rounded-xl bg-slate-100 hover:bg-slate-200 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+            
+            <div className="overflow-y-auto py-4 flex-1 space-y-4">
+              <div className="flex justify-between items-center pb-2 border-b border-slate-50">
+                <strong className="text-sm text-slate-800 flex items-center gap-1.5">
+                  <span>👶</span> Bed {selectedMockBed} ({mockUnit})
+                </strong>
+                <span className={`px-2 py-0.5 rounded-full text-[11px] font-black uppercase ${
+                  selectedBedPatients.length === 0 
+                    ? 'bg-slate-200 text-slate-600' 
+                    : selectedBedPatients.some(p => p.notes?.toLowerCase().includes('observe'))
+                      ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                      : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                }`}>
+                  {selectedBedPatients.length === 1 ? 'Admitted' : 'Double Slot'}
+                </span>
+              </div>
+
+              <div className="space-y-4 divide-y divide-slate-100">
+                {selectedBedPatients.map((patient, index) => {
+                  const ageHours = calculateHoursBetween(patient.dob, new Date().toISOString()) || 0;
+                  const dolString = formatAgeString(ageHours);
+                  const lastRbs = patient.rbsLog && patient.rbsLog.length > 0 ? `${patient.rbsLog[patient.rbsLog.length - 1].value} mg/dL` : 'N/A';
+                  
+                  const gaWeeks = patient.gestationalAgeWeeks !== undefined ? patient.gestationalAgeWeeks : 38;
+                  const gaDays = patient.gestationalAgeDays !== undefined ? patient.gestationalAgeDays : 0;
+                  const hasRisk = patient.hasNeuroRisk || false;
+
+                  const lastBiliLog = patient.bilirubinLog && patient.bilirubinLog.length > 0 ? patient.bilirubinLog[patient.bilirubinLog.length - 1] : null;
+                  const lastBiliValue = lastBiliLog ? `${lastBiliLog.value} mg/dL` : 'N/A';
+
+                  // Compute autothresholds if bilirubin value is logged
+                  let cutoffsText = '';
+                  let classificationText = '';
+                  let classificationColor = '';
+                  if (lastBiliLog) {
+                    const biliHours = calculateHoursBetween(patient.dob, lastBiliLog.timestamp) || ageHours;
+                    const res = calculateBiliCutoffs(gaWeeks, biliHours, hasRisk, lastBiliLog.value);
+                    cutoffsText = `Photo: ≥${res.phototherapy} | Exchange: ≥${res.exchange}`;
+                    classificationText = res.classification.label;
+                    classificationColor = res.classification.color;
+                  }
+
+                  return (
+                    <div key={patient.id} className={`space-y-3 ${index > 0 ? 'pt-4 border-t border-slate-100' : ''}`}>
+                      {selectedBedPatients.length > 1 && (
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-black">
+                          Baby #{index + 1}
+                        </span>
+                      )}
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Patient Code</span>
+                          <strong className="text-slate-800">{patient.name}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Gestational Age</span>
+                          <strong className="text-slate-800">{patient.gestationalAgeWeeks !== undefined ? `${patient.gestationalAgeWeeks}w ${patient.gestationalAgeDays || 0}d` : 'N/A'}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Current DOL</span>
+                          <strong className="text-slate-800">{dolString}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">UHID Registry</span>
+                          <strong className="text-slate-800">{patient.uhid}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Blood Glucose (RBS)</span>
+                          <strong className="text-rose-650">{lastRbs}</strong>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Serum Bilirubin</span>
+                          <strong className="text-amber-700">{lastBiliValue}</strong>
+                        </div>
+                        {lastBiliLog && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Bili Thresholds</span>
+                            <strong className="text-slate-700 font-bold block">{cutoffsText}</strong>
+                          </div>
+                        )}
+                        <div className={lastBiliLog ? 'col-span-2' : ''}>
+                          <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Primary Diagnosis</span>
+                          <strong className="text-indigo-600">{patient.diagnosis}</strong>
+                        </div>
+                        {lastBiliLog && (
+                          <div className="col-span-2">
+                            <span className="text-slate-400 block text-[11px] uppercase font-bold tracking-wider">Bili Clinical Status</span>
+                            <span className={`inline-block px-2.5 py-1 mt-1 rounded-xl text-[11px] font-extrabold border ${classificationColor}`}>
+                              {classificationText}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="bg-slate-50 p-3.5 border border-slate-200/50 rounded-2xl text-xs text-slate-500 leading-relaxed flex gap-2 items-start pt-4">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div>
+                    <strong>Patient Privacy Enforced:</strong>
+                    <p className="mt-0.5 leading-relaxed text-[11px]">
+                      Identities are pseudonymized. To update clinical measurements, log injections, or record sensitivity tests, please sign in via the Staff Portal.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

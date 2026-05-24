@@ -40,6 +40,10 @@ export interface Patient {
   outcomeDate?: string;
   bedNumber?: number;
   rbsLog?: Array<{ value: number; timestamp: string }>;
+  bilirubinLog?: Array<{ value: number; timestamp: string }>;
+  gestationalAgeWeeks?: number;
+  gestationalAgeDays?: number;
+  hasNeuroRisk?: boolean;
   notes?: string;
   culturePositive?: boolean;
   cultureOrganism?: string;
