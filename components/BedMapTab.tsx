@@ -76,14 +76,14 @@ export default function BedMapTab({
   // Row 3: Bed 2, (center nursing desk), Bed 8
   // Row 4 (bottom): Bed 1, (empty), (empty)
   const bedGridPositions = [
-    { bedNum: 1, gridClass: 'col-start-1 row-start-4' },
-    { bedNum: 2, gridClass: 'col-start-1 row-start-3' },
-    { bedNum: 3, gridClass: 'col-start-1 row-start-2' },
-    { bedNum: 4, gridClass: 'col-start-1 row-start-1' },
-    { bedNum: 5, gridClass: 'col-start-2 row-start-1' },
-    { bedNum: 6, gridClass: 'col-start-3 row-start-1' },
-    { bedNum: 7, gridClass: 'col-start-3 row-start-2' },
-    { bedNum: 8, gridClass: 'col-start-3 row-start-3' },
+    { bedNum: 1, gridClass: 'sm:col-start-1 sm:row-start-4' },
+    { bedNum: 2, gridClass: 'sm:col-start-1 sm:row-start-3' },
+    { bedNum: 3, gridClass: 'sm:col-start-1 sm:row-start-2' },
+    { bedNum: 4, gridClass: 'sm:col-start-1 sm:row-start-1' },
+    { bedNum: 5, gridClass: 'sm:col-start-2 sm:row-start-1' },
+    { bedNum: 6, gridClass: 'sm:col-start-3 sm:row-start-1' },
+    { bedNum: 7, gridClass: 'sm:col-start-3 sm:row-start-2' },
+    { bedNum: 8, gridClass: 'sm:col-start-3 sm:row-start-3' },
   ];
 
   return (
@@ -125,12 +125,12 @@ export default function BedMapTab({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Visual Floor Plan Grid */}
-        <div className="lg:col-span-8 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-6 sm:p-8 text-center overflow-x-auto scrollbar-none">
+        <div className="lg:col-span-8 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-3 sm:p-8 text-center overflow-x-auto scrollbar-none">
           
-          <div className="max-w-3xl mx-auto min-w-[580px] sm:min-w-0">
-            <div className="grid grid-cols-3 grid-rows-4 gap-4 sm:gap-6">
-                         {/* Central Desk Widget */}
-              <div className="col-start-2 row-start-2 row-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 flex flex-col justify-center items-center text-center space-y-3 hover-lift transition-all duration-300">
+          <div className="max-w-3xl mx-auto w-full">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:grid-rows-4 sm:gap-6">
+              {/* Central Desk Widget */}
+              <div className="col-span-2 sm:col-span-1 sm:col-start-2 sm:row-start-2 sm:row-span-2 bg-white rounded-3xl border border-slate-200/80 shadow-sm p-4 flex flex-col justify-center items-center text-center space-y-3 hover-lift transition-all duration-300">
                 <div className="w-10 h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
                   <ShieldCheck className="w-5 h-5" />
                 </div>
@@ -170,32 +170,32 @@ export default function BedMapTab({
                         await onShiftPatient(patientId, selectedUnit, bedNum);
                       }
                     }}
-                    className={`${gridClass} rounded-[1.5rem] transition-all duration-300 flex flex-col justify-between items-stretch text-left relative overflow-hidden ${
+                    className={`${gridClass} rounded-[1.25rem] sm:rounded-[1.5rem] transition-all duration-300 flex flex-col justify-between items-stretch text-left relative overflow-hidden ${
                       isOccupied 
-                        ? 'bg-white border border-slate-200/85 p-3.5 space-y-3 shadow-sm hover-lift hover:border-slate-350'
-                        : 'border border-dashed border-slate-300 bg-slate-100/40 p-3.5 hover:bg-white hover:border-slate-450 hover:shadow-sm hover:-translate-y-0.5'
+                        ? 'bg-white border border-slate-200/85 p-2.5 sm:p-3.5 space-y-2 sm:space-y-3 shadow-sm hover-lift hover:border-slate-350'
+                        : 'border border-dashed border-slate-300 bg-slate-100/40 p-2.5 sm:p-3.5 hover:bg-white hover:border-slate-450 hover:shadow-sm hover:-translate-y-0.5'
                     } ${isDragTarget ? 'border-blue-500 border-2 bg-blue-50/30 scale-102 ring-4 ring-blue-100 z-10' : ''}`}
                   >
                     {/* Header Bar */}
-                    <div className="flex justify-between items-center text-xs pb-1.5 border-b border-slate-100">
+                    <div className="flex justify-between items-center text-[10px] sm:text-xs pb-1.5 border-b border-slate-100">
                       <span className={`font-black flex items-center gap-1 ${isOccupied ? 'text-slate-800' : 'text-slate-400'}`}>
-                        <Bed className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                        <Bed className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-blue-500 shrink-0" />
                         Bed {bedNum}
                       </span>
                       {isOccupied ? (
-                        <span className="flex items-center gap-1">
-                          <span className={`w-2 h-2 rounded-full ${bedPatients.length >= 2 ? 'bg-orange-500' : 'bg-blue-500'} animate-pulse`}></span>
-                          <span className="text-xs font-black text-slate-400">{bedPatients.length}/2 slots</span>
+                        <span className="flex items-center gap-0.5 sm:gap-1">
+                          <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${bedPatients.length >= 2 ? 'bg-orange-500' : 'bg-blue-500'} animate-pulse`}></span>
+                          <span className="text-[9px] sm:text-xs font-black text-slate-400">{bedPatients.length}/2 slots</span>
                         </span>
                       ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                        <span className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-slate-300"></span>
                       )}
                     </div>
 
                     {/* Content Section */}
                     {isOccupied ? (
-                      <div className="space-y-3 flex-1 flex flex-col justify-between">
-                        <div className="space-y-2.5 divide-y divide-slate-100">
+                      <div className="space-y-2 sm:space-y-3 flex-1 flex flex-col justify-between">
+                        <div className="space-y-2 divide-y divide-slate-100">
                           {bedPatients.map((patient, index) => {
                             const ageHours = calculateHoursBetween(patient.dob, new Date().toISOString());
                             const dolString = formatAgeString(ageHours);
@@ -208,36 +208,36 @@ export default function BedMapTab({
                                 onDragStart={(e) => {
                                   e.dataTransfer.setData('text/plain', patient.id!);
                                 }}
-                                className={`pt-2.5 first:pt-0 cursor-grab active:cursor-grabbing hover:bg-slate-50/50 rounded-lg p-1.5 transition-all relative border border-transparent hover:border-slate-100`}
+                                className={`pt-2 first:pt-0 cursor-grab active:cursor-grabbing hover:bg-slate-50/50 rounded-lg p-1 transition-all relative border border-transparent hover:border-slate-100`}
                                 title="Drag to move baby to another bed"
                               >
                                 <div className="flex justify-between items-start">
                                   <div className="space-y-0.5">
-                                    <h4 className="text-xs font-black text-slate-800 flex items-center gap-1">
-                                      <span className="text-[10px]">👶</span>
+                                    <h4 className="text-[10px] sm:text-xs font-black text-slate-800 flex items-center gap-1">
+                                      <span className="text-[9px] sm:text-[10px]">👶</span>
                                       {patient.name}
                                     </h4>
-                                    <p className="text-xs font-bold text-slate-400 flex items-center gap-1.5 flex-wrap">
+                                    <p className="text-[9px] sm:text-xs font-bold text-slate-400 flex items-center gap-1 flex-wrap">
                                       <span>UHID: {patient.uhid}</span>
                                       {patient.culturePositive && (
-                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-100 font-black text-[10px] leading-none" title={`Culture: ${patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}`}>
+                                        <span className="inline-flex items-center gap-0.5 px-1 py-0.2 rounded bg-rose-50 text-rose-700 border border-rose-100 font-black text-[8px] sm:text-[10px] leading-none" title={`Culture: ${patient.cultureOrganism === 'Other' ? patient.cultureOrganismOther : patient.cultureOrganism}`}>
                                           🦠 POS
                                         </span>
                                       )}
                                     </p>
                                   </div>
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-xs font-black text-slate-700 bg-slate-100 px-1 rounded">{dolString}</span>
+                                  <div className="flex items-center gap-1">
+                                    <span className="text-[9px] sm:text-xs font-black text-slate-700 bg-slate-100 px-1 rounded">{dolString}</span>
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-xs mt-1.5 text-slate-500 font-semibold">
-                                  <span>Dx: <strong className="text-indigo-600">{patient.diagnosis}</strong></span>
+                                <div className="flex items-center justify-between text-[9px] sm:text-xs mt-1.5 text-slate-500 font-semibold">
+                                  <span>Dx: <strong className="text-indigo-600 block sm:inline">{patient.diagnosis}</strong></span>
                                   <div className="flex items-center gap-1">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); onViewPatient(patient); }}
-                                      className="text-slate-400 hover:text-blue-600 text-[11px] uppercase font-black"
+                                      className="text-slate-400 hover:text-blue-600 text-[9px] sm:text-[11px] uppercase font-black"
                                     >
                                       Edit
                                     </button>
@@ -248,9 +248,9 @@ export default function BedMapTab({
                                         e.stopPropagation();
                                         setExpandedRbsBabyId(isRbsExpanded ? null : patient.id!);
                                       }}
-                                      className={`text-rose-505 hover:text-rose-600 text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
+                                      className={`text-rose-505 hover:text-rose-600 text-[9px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
                                     >
-                                      <Droplet className="w-2 h-2 text-rose-550 shrink-0" />
+                                      <Droplet className="w-1.5 sm:w-2 h-1.5 sm:h-2 text-rose-550 shrink-0" />
                                       RBS {isRbsExpanded ? '▲' : '▼'}
                                     </button>
                                   </div>
@@ -258,34 +258,34 @@ export default function BedMapTab({
 
                                 {/* RBS Sub-panel */}
                                 {isRbsExpanded && (
-                                  <div className="mt-2.5 bg-rose-50/50 p-2.5 rounded-xl border border-rose-100 space-y-2 text-xs text-left animate-slide-up" onClick={e => e.stopPropagation()}>
+                                  <div className="mt-2 bg-rose-50/50 p-2 rounded-xl border border-rose-100 space-y-1.5 text-[9px] sm:text-xs text-left animate-slide-up" onClick={e => e.stopPropagation()}>
                                     <div className="flex justify-between items-center font-bold text-rose-950">
-                                      <span>RBS Readings (mg/dL)</span>
-                                      <span className="text-[10px] text-rose-600">Blood Glucose</span>
+                                      <span>RBS Readings</span>
+                                      <span className="text-[8px] sm:text-[10px] text-rose-600">Glucose</span>
                                     </div>
                                     
                                     <div className="space-y-1 max-h-24 overflow-y-auto">
                                       {patient.rbsLog && patient.rbsLog.length > 0 ? (
                                         patient.rbsLog.slice(-3).reverse().map((log, idx) => (
-                                          <div key={idx} className="flex justify-between items-center bg-white px-2 py-1 rounded border border-rose-100/50">
+                                          <div key={idx} className="flex justify-between items-center bg-white px-1.5 py-0.5 rounded border border-rose-100/50">
                                             <span className="font-extrabold text-rose-700">{log.value} mg/dL</span>
-                                            <span className="text-[10px] text-slate-400">
+                                            <span className="text-[8px] sm:text-[10px] text-slate-400">
                                               {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                           </div>
                                         ))
                                       ) : (
-                                        <span className="text-[11px] text-slate-450 italic block">No blood sugar logs recorded.</span>
+                                        <span className="text-[10px] sm:text-[11px] text-slate-450 italic block">No sugar logs.</span>
                                       )}
                                     </div>
 
-                                    <div className="flex gap-1.5 pt-1.5 border-t border-rose-100">
+                                    <div className="flex gap-1 pt-1 border-t border-rose-100">
                                       <input
                                         type="number"
-                                        placeholder="e.g. 75"
+                                        placeholder="75"
                                         value={rbsInputValues[patient.id!] || ''}
                                         onChange={(e) => setRbsInputValues(prev => ({ ...prev, [patient.id!]: e.target.value }))}
-                                        className="w-16 bg-white border border-slate-200 rounded px-1.5 py-1 text-xs font-semibold text-slate-800 outline-none"
+                                        className="w-12 bg-white border border-slate-200 rounded px-1 py-0.5 text-[10px] sm:text-xs font-semibold text-slate-800 outline-none"
                                       />
                                       <button
                                         type="button"
@@ -295,7 +295,7 @@ export default function BedMapTab({
                                           await onAddRbs(patient.id!, val);
                                           setRbsInputValues(prev => ({ ...prev, [patient.id!]: '' }));
                                         }}
-                                        className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-2.5 py-1 rounded text-xs cursor-pointer transition-colors"
+                                        className="bg-rose-600 hover:bg-rose-500 text-white font-bold px-2 py-0.5 rounded text-[10px] sm:text-xs cursor-pointer transition-colors"
                                       >
                                         Save
                                       </button>
@@ -312,10 +312,10 @@ export default function BedMapTab({
                           <button
                             type="button"
                             onClick={() => onAdmitPatient(selectedUnit, bedNum)}
-                            className="w-full border border-dashed border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-350 text-center py-2 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-655 transition-all flex items-center justify-center gap-1 cursor-pointer"
+                            className="w-full border border-dashed border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-350 text-center py-1.5 rounded-xl text-[10px] sm:text-xs font-bold text-slate-400 hover:text-slate-655 transition-all flex items-center justify-center gap-1 cursor-pointer"
                           >
-                            <Plus className="w-3.5 h-3.5 text-slate-400" />
-                            Vacant (Host 2nd Baby)
+                            <Plus className="w-3 h-3 text-slate-400" />
+                            Vacant (Slot 2)
                           </button>
                         )}
                       </div>
@@ -324,12 +324,12 @@ export default function BedMapTab({
                       <button
                         type="button"
                         onClick={() => onAdmitPatient(selectedUnit, bedNum)}
-                        className="w-full flex-1 flex flex-col justify-center items-center py-6 text-center focus:outline-none cursor-pointer group"
+                        className="w-full flex-1 flex flex-col justify-center items-center py-3 sm:py-6 text-center focus:outline-none cursor-pointer group"
                       >
-                        <Plus className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
-                        <span className="text-xs text-slate-400 group-hover:text-slate-600 font-bold mt-1">Vacant</span>
-                        <span className="text-[11px] font-black uppercase text-slate-400 group-hover:text-blue-600 text-center tracking-wider transition-colors pt-2 mt-2 border-t border-transparent group-hover:border-slate-200/50 w-full">
-                          + Admit Baby
+                        <Plus className="w-4 sm:w-5 h-4 sm:h-5 text-slate-300 group-hover:text-blue-500 transition-colors" />
+                        <span className="text-[10px] sm:text-xs text-slate-400 group-hover:text-slate-600 font-bold mt-0.5 sm:mt-1">Vacant</span>
+                        <span className="text-[8px] sm:text-[11px] font-black uppercase text-slate-400 group-hover:text-blue-600 text-center tracking-wider transition-colors pt-1.5 sm:pt-2 mt-1.5 sm:mt-2 border-t border-transparent group-hover:border-slate-200/50 w-full">
+                          + Admit
                         </span>
                       </button>
                     )}

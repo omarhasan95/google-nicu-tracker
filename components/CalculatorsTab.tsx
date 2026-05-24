@@ -16,6 +16,34 @@ import {
   Percent,
   Plus
 } from 'lucide-react';
+import { FENTON_DATA } from '../lib/fentonData';
+
+// Standard normal cumulative distribution function (CDF) approximation
+function pnorm(z: number): number {
+  const t = 1 / (1 + 0.2316419 * Math.abs(z));
+  const d = 0.39894228 * Math.exp(-z * z / 2);
+  const p = d * t * (0.31938153 + t * (-0.356563782 + t * (1.781477937 + t * (-1.821255978 + t * 1.330274429))));
+  return z > 0 ? 1 - p : p;
+}
+
+// Reverse standard normal CDF approximation (to convert percentiles to Z-scores)
+// Z = 3rd: -1.88, 10th: -1.28, 50th: 0, 90th: 1.28, 97th: 1.88
+const Z_VALUES = {
+  p3: -1.8808,
+  p10: -1.2816,
+  p50: 0,
+  p90: 1.2816,
+  p97: 1.8808
+};
+
+function calculateFentonLMSValue(l: number, m: number, s: number, z: number): number {
+  if (l !== 0) {
+    const val = 1 + l * s * z;
+    if (val <= 0) return 0;
+    return m * Math.pow(val, 1 / l);
+  }
+  return m * Math.exp(s * z);
+}
 
 // --- AAP 2022 Bilirubin Curves Nomogram Data ---
 interface BiliThresholdPoint {
@@ -149,7 +177,20 @@ const PRETERM_BILI_THRESHOLDS: Record<string, PretermBiliThresholds> = {
 };
 
 export default function CalculatorsTab() {
-  const [subTab, setSubTab] = useState<'fluid' | 'bilirubin' | 'biliPreterm' | 'apgar' | 'gestational' | 'downes' | 'sa' | 'cpapinjury'>('fluid');
+  const [subTab, setSubTab] = useState<'fluid' | 'bilirubin' | 'biliPreterm' | 'fenton' | 'apgar' | 'gestational' | 'downes' | 'sa' | 'cpapinjury'>('fluid');
+
+  // --- Fenton Growth Chart States ---
+  const [fentonSex, setFentonSex] = useState<'m' | 'f'>('m');
+  const [fentonGaWeeks, setFentonGaWeeks] = useState<number>(30);
+  const [fentonGaDays, setFentonGaDays] = useState<number>(0);
+  const [fentonWeight, setFentonWeight] = useState<string>('1300'); // grams
+  const [fentonLength, setFentonLength] = useState<string>('38'); // cm
+  const [fentonHc, setFentonHc] = useState<string>('27'); // cm
+
+  // --- Bilirubin Link to Fluids States ---
+  const [biliLinkFluids, setBiliLinkFluids] = useState<boolean>(false);
+  const [biliWeightGrams, setBiliWeightGrams] = useState<number>(1500);
+  const [biliDextrosePercent, setBiliDextrosePercent] = useState<number>(10);
 
   // --- 1. Fluid & GIR Calculator States ---
   const [weightGrams, setWeightGrams] = useState<number>(1500);
@@ -221,6 +262,93 @@ export default function CalculatorsTab() {
     }
     return { label: 'Below Phototherapy Threshold', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', icon: '✅', type: 'safe' };
   }, [tsbMgDl, thresholds]);
+
+  // --- Fenton Growth Chart Calculations ---
+  const fentonResults = useMemo(() => {
+    const days = fentonGaWeeks * 7 + fentonGaDays;
+    
+    const calculateMetric = (metricName: 'weight' | 'length' | 'hc', valueStr: string) => {
+      const val = parseFloat(valueStr);
+      if (isNaN(val) || val <= 0) return null;
+      
+      const lookupDays = Math.max(158, Math.min(350, days));
+      const key = `${metricName}_${fentonSex}_${lookupDays}`;
+      const lms = FENTON_DATA[key];
+      if (!lms) return null;
+      
+      const { l, m, s } = lms;
+      
+      let z = 0;
+      if (l !== 0) {
+        z = (Math.pow(val / m, l) - 1) / (l * s);
+      } else {
+        z = Math.log(val / m) / s;
+      }
+      
+      const percentile = pnorm(z) * 100;
+      
+      const p3Val = calculateFentonLMSValue(l, m, s, Z_VALUES.p3);
+      const p10Val = calculateFentonLMSValue(l, m, s, Z_VALUES.p10);
+      const p50Val = calculateFentonLMSValue(l, m, s, Z_VALUES.p50);
+      const p90Val = calculateFentonLMSValue(l, m, s, Z_VALUES.p90);
+      const p97Val = calculateFentonLMSValue(l, m, s, Z_VALUES.p97);
+      
+      return {
+        z: parseFloat(z.toFixed(2)),
+        percentile: parseFloat(percentile.toFixed(1)),
+        curves: {
+          p3: parseFloat(p3Val.toFixed(1)),
+          p10: parseFloat(p10Val.toFixed(1)),
+          p50: parseFloat(p50Val.toFixed(1)),
+          p90: parseFloat(p90Val.toFixed(1)),
+          p97: parseFloat(p97Val.toFixed(1)),
+        }
+      };
+    };
+    
+    return {
+      weight: calculateMetric('weight', fentonWeight),
+      length: calculateMetric('length', fentonLength),
+      hc: calculateMetric('hc', fentonHc),
+      days,
+    };
+  }, [fentonSex, fentonGaWeeks, fentonGaDays, fentonWeight, fentonLength, fentonHc]);
+
+  // --- Bilirubin Link to Fluids Calculations ---
+  const biliCalculatedDol = useMemo(() => {
+    return Math.floor(ageHours / 24) + 1;
+  }, [ageHours]);
+
+  const biliFluidsResult = useMemo(() => {
+    if (!biliLinkFluids) return null;
+    
+    let baselineTfr = 70;
+    if (biliCalculatedDol === 2) baselineTfr = 90;
+    else if (biliCalculatedDol === 3) baselineTfr = 110;
+    else if (biliCalculatedDol === 4) baselineTfr = 130;
+    else if (biliCalculatedDol >= 5) baselineTfr = 140;
+    
+    const isPhotoIndicated = tsbMgDl >= thresholds.phototherapy;
+    const photoAllowance = isPhotoIndicated ? 15 : 0;
+    const totalTfr = baselineTfr + photoAllowance;
+    
+    const weightKg = biliWeightGrams / 1000;
+    const totalVolDay = totalTfr * weightKg;
+    const ivRate = totalVolDay / 24;
+    
+    const calculatedGir = weightKg > 0 ? (ivRate * biliDextrosePercent) / (6 * weightKg) : 0;
+    
+    return {
+      dol: biliCalculatedDol,
+      baselineTfr,
+      photoAllowance,
+      totalTfr,
+      totalVolDay,
+      ivRate,
+      gir: calculatedGir,
+      isPhotoIndicated
+    };
+  }, [biliLinkFluids, biliCalculatedDol, tsbMgDl, thresholds.phototherapy, biliWeightGrams, biliDextrosePercent]);
 
   // --- Preterm Bilirubin (<35 weeks) States ---
   const [pretermGaGroup, setPretermGaGroup] = useState<string>('32-33');
@@ -422,6 +550,7 @@ export default function CalculatorsTab() {
           { id: 'fluid', label: 'Fluid & GIR', icon: Droplet },
           { id: 'bilirubin', label: 'Bilirubin (AAP 2022)', icon: TrendingUp },
           { id: 'biliPreterm', label: 'Preterm Bili (<35w)', icon: TrendingUp },
+          { id: 'fenton', label: 'Fenton Growth', icon: Percent },
           { id: 'apgar', label: 'APGAR Score', icon: Activity },
           { id: 'gestational', label: 'GA & Corrected Age', icon: Calendar },
           { id: 'downes', label: 'Downes Score', icon: Activity },
@@ -725,6 +854,47 @@ export default function CalculatorsTab() {
                     </div>
                   </label>
                 </div>
+
+                <div className="border-t border-slate-200 pt-4">
+                  <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Fluid Automation Link</h4>
+                  <label className="flex items-start space-x-3 cursor-pointer bg-white p-3 rounded-xl border border-slate-200/50 hover:bg-slate-100/30 transition-all">
+                    <input
+                      type="checkbox"
+                      checked={biliLinkFluids}
+                      onChange={(e) => setBiliLinkFluids(e.target.checked)}
+                      className="mt-0.5 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                    />
+                    <div className="text-xs leading-relaxed text-slate-600">
+                      <strong className="font-bold text-slate-700 block">Link to Fluid Calculator</strong>
+                      <p className="text-[10px] text-slate-400 mt-0.5 leading-snug">
+                        Automatically calculate the infant's recommended fluid rate (TFR), daily volume, and GIR based on their DOL and phototherapy status.
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                {biliLinkFluids && (
+                  <div className="space-y-4 pt-3 border-t border-dashed border-slate-200 animate-slide-up">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Baby Weight (grams)</label>
+                      <input
+                        type="number"
+                        value={biliWeightGrams}
+                        onChange={(e) => setBiliWeightGrams(Math.max(100, parseInt(e.target.value) || 0))}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 mb-1.5">Dextrose Concentration (%)</label>
+                      <input
+                        type="number"
+                        value={biliDextrosePercent}
+                        onChange={(e) => setBiliDextrosePercent(Math.max(0, parseFloat(e.target.value) || 0))}
+                        className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Outputs Summary (Col 7) */}
@@ -827,6 +997,52 @@ export default function CalculatorsTab() {
                     * Nomogram curves are derived from the American Academy of Pediatrics (AAP) 2022 Guidelines. Recommendations are for decision-support reference only.
                   </span>
                 </div>
+
+                {biliFluidsResult && (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4 animate-slide-up text-left">
+                    <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider border-b border-slate-200 pb-2 flex items-center gap-1.5">
+                      <span>💧</span> Automated Fluid Recommendations (DOL {biliFluidsResult.dol})
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Baseline TFR</span>
+                        <strong className="text-slate-800 text-sm font-black">{biliFluidsResult.baselineTfr} mL/kg/day</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Photo Increase</span>
+                        <strong className={`text-sm font-black ${biliFluidsResult.photoAllowance > 0 ? 'text-amber-600' : 'text-slate-500'}`}>
+                          +{biliFluidsResult.photoAllowance} mL/kg/day
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Total Target TFR</span>
+                        <strong className="text-blue-600 text-sm font-black">{biliFluidsResult.totalTfr} mL/kg/day</strong>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Daily Fluid Volume</span>
+                        <strong className="text-slate-800 text-sm font-black">{biliFluidsResult.totalVolDay.toFixed(1)} mL/day</strong>
+                      </div>
+                      <div className="col-span-2 border-t border-slate-200/60 pt-3 flex justify-between items-center">
+                        <div>
+                          <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">IV Infusion Rate</span>
+                          <strong className="text-blue-600 text-lg font-black">{biliFluidsResult.ivRate.toFixed(1)} mL/hr</strong>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-slate-400 font-bold block uppercase tracking-wider text-[10px]">Infused GIR</span>
+                          <strong className="text-slate-800 text-lg font-black">{biliFluidsResult.gir.toFixed(1)} mg/kg/min</strong>
+                        </div>
+                      </div>
+                    </div>
+                    {biliFluidsResult.isPhotoIndicated && (
+                      <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-[10px] text-amber-800 leading-normal flex gap-1.5 font-semibold">
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                        <span>
+                          <strong>Phototherapy Fluid Allowance Applied</strong>: An extra 15 mL/kg/day was automatically added to the baseline fluid volume to compensate for phototherapy light exposure.
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
               </div>
             </div>
@@ -1670,6 +1886,305 @@ export default function CalculatorsTab() {
           </div>
         )}
 
+        {/* --- TAB 8: FENTON PRETERM GROWTH CHART CALCULATOR --- */}
+        {subTab === 'fenton' && (
+          <div className="space-y-8 animate-slide-up">
+            <div>
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <span className="w-9 h-9 bg-blue-50 text-blue-500 rounded-lg flex items-center justify-center text-sm">📈</span>
+                Fenton 2013 Preterm Growth Calculator
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Calculate weight, length, and head circumference percentiles and Z-scores for preterm infants (22w4d to 50w0d).
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+              {/* Inputs Panel (Col 5) */}
+              <div className="lg:col-span-5 bg-slate-50 rounded-2xl p-6 border border-slate-200/50 space-y-5">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Growth Parameters</h3>
+                
+                {/* Sex Input */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Sex</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setFentonSex('m')}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer font-bold text-xs ${
+                        fentonSex === 'm'
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      ♂️ Boy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFentonSex('f')}
+                      className={`p-3 rounded-xl border text-center transition-all cursor-pointer font-bold text-xs ${
+                        fentonSex === 'f'
+                          ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                          : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                      }`}
+                    >
+                      ♀️ Girl
+                    </button>
+                  </div>
+                </div>
+
+                {/* Gestational Age Input */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">GA Weeks</label>
+                    <input
+                      type="number"
+                      min="22"
+                      max="50"
+                      value={fentonGaWeeks}
+                      onChange={(e) => setFentonGaWeeks(Math.max(22, Math.min(50, parseInt(e.target.value) || 0)))}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">GA Days</label>
+                    <input
+                      type="number"
+                      min="0"
+                      max="6"
+                      value={fentonGaDays}
+                      onChange={(e) => setFentonGaDays(Math.max(0, Math.min(6, parseInt(e.target.value) || 0)))}
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Clamping Warning */}
+                {(fentonResults.days < 158 || fentonResults.days > 350) && (
+                  <div className="p-3 bg-amber-50 border border-amber-100 rounded-xl text-[10px] text-amber-800 font-semibold leading-normal flex gap-1.5">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <span>
+                      Gestational age ({fentonGaWeeks}w {fentonGaDays}d = {fentonResults.days} days) is outside the Fenton standard range (22w4d to 50w0d). Calculations will be clamped to the boundaries.
+                    </span>
+                  </div>
+                )}
+
+                {/* Measurements Inputs */}
+                <div className="space-y-4 border-t border-slate-200/80 pt-4">
+                  <h4 className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Measurements</h4>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Weight (grams)</label>
+                    <input
+                      type="number"
+                      value={fentonWeight}
+                      onChange={(e) => setFentonWeight(e.target.value)}
+                      placeholder="e.g. 1500"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Length (cm)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={fentonLength}
+                      onChange={(e) => setFentonLength(e.target.value)}
+                      placeholder="e.g. 40"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1">Head Circumference (cm)</label>
+                    <input
+                      type="number"
+                      step="0.1"
+                      value={fentonHc}
+                      onChange={(e) => setFentonHc(e.target.value)}
+                      placeholder="e.g. 28"
+                      className="w-full bg-white border border-slate-200 rounded-xl p-3 text-sm font-semibold text-slate-800 outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Outputs Summary (Col 7) */}
+              <div className="lg:col-span-7 space-y-6">
+                <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Growth Percentiles & Z-Scores</h3>
+
+                {/* Grid for calculated results */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    { label: 'Weight', value: fentonWeight, res: fentonResults.weight, unit: 'g' },
+                    { label: 'Length', value: fentonLength, res: fentonResults.length, unit: 'cm' },
+                    { label: 'Head Circ.', value: fentonHc, res: fentonResults.hc, unit: 'cm' }
+                  ].map((metric) => {
+                    const parsedVal = parseFloat(metric.value);
+                    const hasVal = !isNaN(parsedVal) && parsedVal > 0;
+                    
+                    if (!hasVal) {
+                      return (
+                        <div key={metric.label} className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 text-center flex flex-col justify-center min-h-[140px]">
+                          <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wide">{metric.label}</span>
+                          <span className="text-xs text-slate-400 font-semibold mt-2">Enter value</span>
+                        </div>
+                      );
+                    }
+
+                    if (!metric.res) {
+                      return (
+                        <div key={metric.label} className="bg-rose-50 border border-rose-100 rounded-2xl p-4 text-center flex flex-col justify-center min-h-[140px]">
+                          <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wide">{metric.label}</span>
+                          <span className="text-xs text-rose-650 font-bold mt-2">Lookup error</span>
+                        </div>
+                      );
+                    }
+
+                    const { z, percentile } = metric.res;
+                    let colorClass = 'text-emerald-700 bg-emerald-50 border-emerald-100';
+                    if (percentile < 10 || percentile > 90) {
+                      colorClass = 'text-amber-700 bg-amber-50 border-amber-100';
+                    }
+                    if (percentile < 3 || percentile > 97) {
+                      colorClass = 'text-rose-700 bg-rose-50 border-rose-100';
+                    }
+
+                    return (
+                      <div key={metric.label} className={`border rounded-2xl p-4 flex flex-col justify-between min-h-[140px] ${colorClass}`}>
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider block opacity-70">{metric.label}</span>
+                          <strong className="text-sm font-extrabold block mt-0.5">{parsedVal} {metric.unit}</strong>
+                        </div>
+                        <div className="mt-3">
+                          <span className="text-[10px] opacity-60 font-bold block">Percentile</span>
+                          <h4 className="text-2xl font-black tracking-tight">{percentile}th</h4>
+                          <span className="text-[10px] font-bold block opacity-75 mt-0.5">Z-score: {z > 0 ? `+${z}` : z}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Visual Percentile Indicators */}
+                <div className="bg-white rounded-2xl border border-slate-200/60 p-5 space-y-6">
+                  <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Growth Percentile Indicators</h4>
+                  
+                  <div className="space-y-6">
+                    {[
+                      { label: 'Weight', res: fentonResults.weight, unit: 'g' },
+                      { label: 'Length', res: fentonResults.length, unit: 'cm' },
+                      { label: 'Head Circumference', res: fentonResults.hc, unit: 'cm' }
+                    ].map((metric) => {
+                      if (!metric.res) return null;
+                      const { percentile, curves } = metric.res;
+                      
+                      return (
+                        <div key={metric.label} className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="font-bold text-slate-700">{metric.label}</span>
+                            <span className="text-[10px] text-slate-500 font-extrabold">{percentile}th Centile</span>
+                          </div>
+                          
+                          <div className="relative pt-4 pb-2">
+                            {/* Percentile segment indicators */}
+                            <div className="absolute top-0 inset-x-0 text-[8px] font-bold text-slate-400 h-3">
+                              <span className="absolute left-[3%] transform -translate-x-1/2">3rd ({curves.p3})</span>
+                              <span className="absolute left-[10%] transform -translate-x-1/2">10th ({curves.p10})</span>
+                              <span className="absolute left-[50%] transform -translate-x-1/2">50th ({curves.p50})</span>
+                              <span className="absolute left-[90%] transform -translate-x-1/2">90th ({curves.p90})</span>
+                              <span className="absolute left-[97%] transform -translate-x-1/2">97th ({curves.p97})</span>
+                            </div>
+
+                            {/* Color track */}
+                            <div className="h-2 w-full rounded-full flex overflow-hidden bg-slate-100 mt-1">
+                              <div className="bg-rose-300" style={{ width: '3%' }}></div>
+                              <div className="bg-amber-200" style={{ width: '7%' }}></div>
+                              <div className="bg-emerald-300" style={{ width: '40%' }}></div>
+                              <div className="bg-emerald-300" style={{ width: '40%' }}></div>
+                              <div className="bg-amber-200" style={{ width: '7%' }}></div>
+                              <div className="bg-rose-300" style={{ width: '3%' }}></div>
+                            </div>
+
+                            {/* Indicator Pin */}
+                            <div 
+                              className="absolute bottom-1.5 flex flex-col items-center transform -translate-x-1/2 transition-all duration-300 z-10"
+                              style={{ left: `${Math.max(1, Math.min(99, percentile))}%` }}
+                            >
+                              <span className="bg-slate-800 text-white font-extrabold text-[8px] px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap">
+                                {percentile}%
+                              </span>
+                              <div className="w-1 h-2 bg-slate-800 mt-0.5 clip-triangle"></div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Reference Curves Table */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 overflow-hidden shadow-sm">
+                  <div className="bg-slate-50 px-4 py-3 border-b border-slate-100 text-xs font-bold text-slate-600">
+                    Fenton Reference Values for {fentonGaWeeks}w {fentonGaDays}d ({fentonSex === 'm' ? 'Boy' : 'Girl'})
+                  </div>
+                  <table className="w-full text-xs text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase">
+                        <th className="px-4 py-2.5">Measurement Type</th>
+                        <th className="px-3 py-2.5 text-center">3rd %</th>
+                        <th className="px-3 py-2.5 text-center">10th %</th>
+                        <th className="px-3 py-2.5 text-center">50th % (Median)</th>
+                        <th className="px-3 py-2.5 text-center">90th %</th>
+                        <th className="px-3 py-2.5 text-center">97th %</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                      {[
+                        { label: 'Weight (grams)', key: 'weight', unit: 'g' },
+                        { label: 'Length (cm)', key: 'length', unit: 'cm' },
+                        { label: 'Head Circumference (cm)', key: 'hc', unit: 'cm' }
+                      ].map((item) => {
+                        const res = fentonResults[item.key as 'weight' | 'length' | 'hc'];
+                        if (!res) {
+                          return (
+                            <tr key={item.key}>
+                              <td className="px-4 py-3 font-semibold text-slate-400">{item.label}</td>
+                              <td colSpan={5} className="px-3 py-3 text-center text-slate-400 italic">No reference loaded</td>
+                            </tr>
+                          );
+                        }
+                        const { curves } = res;
+                        return (
+                          <tr key={item.key} className="hover:bg-slate-50/40 transition-colors">
+                            <td className="px-4 py-3 font-semibold text-slate-800">{item.label}</td>
+                            <td className="px-3 py-3 text-center tabular-nums">{curves.p3}</td>
+                            <td className="px-3 py-3 text-center tabular-nums">{curves.p10}</td>
+                            <td className="px-3 py-3 text-center tabular-nums bg-blue-50/40 text-blue-700 font-bold">{curves.p50}</td>
+                            <td className="px-3 py-3 text-center tabular-nums">{curves.p90}</td>
+                            <td className="px-3 py-3 text-center tabular-nums">{curves.p97}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="p-4 bg-slate-50 border border-slate-200/50 rounded-xl text-[10px] text-slate-500 leading-relaxed text-left flex gap-2">
+                  <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div>
+                    <strong>Fenton Growth Standard Reference Note:</strong>
+                    <p className="mt-0.5">
+                      Fenton Preterm Growth Charts (2013 update) allow comparison of preterm infant growth with the intrauterine growth rate and standard term birth sizes. Percentiles and Z-scores are calculated using the LMS parameters (L: skewness, M: median, S: coefficient of variation) from the Fenton dataset.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

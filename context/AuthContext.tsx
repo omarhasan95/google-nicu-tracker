@@ -8,10 +8,13 @@ import {
   createUserWithEmailAndPassword, 
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithCredential
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
 import { BabyProfile } from '../types';
+import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { 
   isMockMode, 
   getBabyProfile, 
@@ -187,8 +190,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const result = await FirebaseAuthentication.signInWithGoogle();
+        if (result.credential?.idToken) {
+          const credential = GoogleAuthProvider.credential(result.credential.idToken);
+          await signInWithCredential(auth, credential);
+        } else {
+          throw new Error("No Google ID token returned.");
+        }
+      } catch (error) {
+        console.error("Native Google sign-in failed:", error);
+        setLoading(false);
+        throw error;
+      }
+    } else {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+    }
   };
 
   const logout = async () => {
