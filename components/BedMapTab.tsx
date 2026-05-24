@@ -133,7 +133,7 @@ export default function BedMapTab({
         <div className="lg:col-span-8 bg-slate-55 bg-slate-50 border border-slate-200/60 rounded-[2rem] p-3 sm:p-8 text-center overflow-x-auto scrollbar-none">
           
           <div className="max-w-3xl mx-auto w-full">
-            <div className="grid grid-cols-3 grid-rows-4 gap-2 sm:gap-6">
+            <div className="grid grid-cols-3 grid-rows-[auto_auto_auto_auto] gap-2 sm:gap-6">
               {/* Central Desk Widget */}
               <div className="col-start-2 row-start-2 row-span-2 col-span-1 bg-white rounded-2xl sm:rounded-3xl border border-slate-200/80 shadow-sm p-2 sm:p-4 flex flex-col justify-center items-center text-center space-y-1.5 sm:space-y-3 hover-lift transition-all duration-300">
                 <div className="w-8 h-8 sm:w-10 sm:h-10 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center">
@@ -257,17 +257,18 @@ export default function BedMapTab({
                                   </div>
                                 </div>
 
-                                <div className="flex items-center justify-between text-[8px] sm:text-xs mt-1.5 text-slate-500 font-semibold gap-1">
-                                  <span className="truncate max-w-[45px] sm:max-w-none">Dx: <strong className="text-indigo-600">{patient.diagnosis}</strong></span>
-                                  <div className="flex items-center gap-0.5 sm:gap-1 shrink-0">
+                                <div className="mt-1.5 pt-1 border-t border-slate-100 flex flex-col gap-1.5">
+                                  <div className="text-[8px] sm:text-xs text-slate-500 font-semibold truncate">
+                                    Dx: <strong className="text-indigo-600">{patient.diagnosis}</strong>
+                                  </div>
+                                  <div className="flex flex-wrap items-center justify-between gap-1">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); onViewPatient(patient); }}
-                                      className="text-slate-400 hover:text-blue-600 text-[8px] sm:text-[11px] uppercase font-black"
+                                      className="text-slate-400 hover:text-blue-600 text-[8px] sm:text-[11px] uppercase font-black py-0.5"
                                     >
                                       Edit
                                     </button>
-                                    <span className="text-slate-200">|</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -275,12 +276,11 @@ export default function BedMapTab({
                                         setExpandedRbsBabyId(isRbsExpanded ? null : patient.id!);
                                         setExpandedBiliBabyId(null);
                                       }}
-                                      className={`text-rose-505 hover:text-rose-600 text-[8px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
+                                      className={`text-rose-505 hover:text-rose-600 text-[7px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-rose-50 px-1 py-0.5 rounded ${isRbsExpanded ? 'ring-1 ring-rose-250 font-extrabold' : ''}`}
                                     >
                                       <Droplet className="w-1.5 sm:w-2 h-1.5 sm:h-2 text-rose-550 shrink-0" />
                                       RBS {isRbsExpanded ? '▲' : '▼'}
                                     </button>
-                                    <span className="text-slate-200">|</span>
                                     <button
                                       type="button"
                                       onClick={(e) => {
@@ -288,7 +288,7 @@ export default function BedMapTab({
                                         setExpandedBiliBabyId(isBiliExpanded ? null : patient.id!);
                                         setExpandedRbsBabyId(null);
                                       }}
-                                      className={`text-amber-650 hover:text-amber-700 text-[8px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-amber-50 px-1 py-0.5 rounded ${isBiliExpanded ? 'ring-1 ring-amber-250 font-extrabold' : ''}`}
+                                      className={`text-amber-650 hover:text-amber-700 text-[7px] sm:text-[11px] uppercase font-black flex items-center gap-0.5 bg-amber-50 px-1 py-0.5 rounded ${isBiliExpanded ? 'ring-1 ring-amber-250 font-extrabold' : ''}`}
                                     >
                                       <Droplet className="w-1.5 sm:w-2 h-1.5 sm:h-2 text-amber-550 shrink-0" />
                                       Bili {isBiliExpanded ? '▲' : '▼'}
